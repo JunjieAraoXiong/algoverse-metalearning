@@ -1,0 +1,244 @@
+Meta-Learning
+Designing, Visualizing and Understanding Deep Neural Networks
+CS W182/282A
+Instructor: Sergey Levine
+UC Berkeley
+
+
+What is meta-learning?
+• If you’ve learned 100 tasks already, can you 
+figure out how to learn more efficiently?
+• Now having multiple tasks is a huge advantage!
+• Meta-learning = learning to learn
+• In practice, very closely related to multi-task 
+learning
+• Many formulations
+• Learning an optimizer
+• Learning an RNN that ingests experience
+• Learning a representation
+image credit: Ke Li 
+
+Why is meta-learning a good idea?
+• Deep learning works very well, but requires large datasets
+• In many cases, we only have a small amount of data available (e.g., 
+some specific computer vision task), but we might have lots of 
+data of a similar type for other tasks (e.g., other object 
+classification tasks)
+• How does a meta-learner help with this?
+• Use plentiful prior tasks to meta-train a model that can learn a new task 
+quickly with only a few examples
+• Collect a small amount of labeled data for the new task
+• Learn a model on this new dataset that generalizes broadly
+
+Meta-learning with supervised learning
+image credit: Ravi & Larochelle ‘17
+
+Meta-learning with supervised learning
+(few shot) training set
+input (e.g., image) output (e.g., label)
+training set
+• How to read in training set?
+• Many options, RNNs can work
+• More on this later 
+test input
+test label
+
+What is being “learned”?
+(few shot) training set
+ test input
+test label
+
+
+What is being “learned”?
+meta-learned 
+weightsRNN hidden 
+state
+
+
+Meta-learning methods
+black-box meta-learning non-parametric meta-learning gradient-based meta-learning
+some kind of network that can read in an 
+entire (few-shot) training set
+Santoro et al. Meta-Learning 
+with Memory-Augmented 
+Neural Networks. 2016.
+Mishra et al. A Simple 
+Neural Attentive Meta-
+Learner. 2018.
+Vinyals et al. Matching Networks for 
+One Shot Learning. 2017.
+Snell et al. Prototypical Networks 
+for Few-shot Learning. 2018.
+Finn et al. Model-Agnostic Meta-Learning. 2018.
+
+Non-Parametric & Gradient-Based Meta-Learning
+
+Basic idea
+comparison
+nearest 
+neighbor
+why does this work?
+that is, why does the nearest 
+neighbor have the right class?
+because we meta-train the 
+features so that this produces 
+the right answer!
+learned (soft) nearest 
+neighbor classifier
+all training points that have this label
+
+Matching networks
+Vinyals et al. Matching networks for few-shot learning. 2016.
+bidirectional LSTM embedding
+attentional LSTM embedding
+
+
+Prototypical networks
+Snell et al. Prototypical networks for few-shot learning. 2017.
+Two simple ideas compared to matching networks:
+1. Instead of “soft nearest neighbor,” construct prototype for each class
+2. Get rid of all the complex junk bidirectional LSTM embedding
+attentional LSTM embedding
+
+Back to representations…
+is pretraining a type of meta-learning?
+better features = faster learning of new task!
+
+
+Meta-learning as an optimization problem
+Finn, Abbeel, Levine. Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks.
+(could take a few gradient steps in general)
+This can be trained the same way as any
+other neural network, by implementing
+gradient descent as a computation graph 
+and then running backpropagation through
+gradient descent!
+
+MAML in pictures
+[Label]
+
+
+What did we just do??
+Just another computation graph…
+Can implement with any autodiff
+package (e.g., TensorFlow)
+But has favorable inductive bias…
+
+Why does it work?
+this implements the 
+“learned learning algorithm”
+test input
+test label
+black-based meta-learning
+• Does it converge?
+• Kind of?
+• What does it converge to?
+• Who knows…
+• What to do if it’s not good enough?
+• Nothing…
+MAML
+• Does it converge?
+• Yes (it’s gradient descent…)
+• What does it converge to?
+• A local optimum (it’s gradient descent…)
+• What to do if it’s not good enough?
+• Keep taking gradient steps (it’s gradient descent…)
+
+Universality
+Did we lose anything?
+Universality: meta-learning can learn any “algorithm”
+Finn & Levine. “Meta-Learning and Universality”
+
+Summary
+black-box meta-learning non-parametric meta-learning gradient-based meta-learning
+some kind of network that can read in an 
+entire (few-shot) training set
+Vinyals et al. Matching Networks for 
+One Shot Learning. 2017.
+ Finn et al. Model-Agnostic Meta-Learning. 2018.
++ conceptually very simple
++ benefits from advances in 
+sequence models (e.g., transformers)
+- minimal inductive bias (i.e., 
+everything has to be meta-learned)
+- hard to scale to “medium” shot (we 
+get long “sequences)
++ can work very well by combining 
+some inductive bias with easy end-
+to-end optimization
+- restricted to classification, hard to 
+extend to other settings like 
+regression or reinforcement learning
+- somewhat specialized architectures
++ easy to apply to any architecture or 
+loss function (inc. RL, regression)
+- meta-training optimization problem 
+is harder, requires more tuning
+- requires second derivatives
++ good generalization to out-of-
+domain tasks
+
+Meta-Reinforcement Learning
+
+The meta reinforcement learning problem
+
+
+The meta reinforcement learning problem
+0.5 m/s 0.7 m/s -0.2 m/s -0.7 m/s
+
+
+Meta-RL with recurrent policies
+meta-learned 
+weightsRNN hidden 
+state
+
+Meta-RL with recurrent policies
++0 +0
++0 +1
++0
++1
+crucially, RNN hidden state is not reset between episodes!
+
+
+Why recurrent policies learn to explore
+episode
+meta-episode
+optimizing total reward over 
+the entire meta-episode with 
+RNN policy automatically 
+learns to explore!
+
+
+Meta-RL with recurrent policies
+Wang, Kurth-Nelson, Tirumala, Soyer, Leibo, Munos, 
+Blundell, Kumaran, Botvinick. Learning to Reinforcement 
+Learning. 2016.
+Duan, Schulman, Chen, Bartlett, Sutskever, Abbeel. RL2: 
+Fast Reinforcement Learning via Slow Reinforcement 
+Learning. 2016.
+Heess, Hunt, Lillicrap, Silver. Memory-based control with 
+recurrent neural networks. 2015.
+
+
+Architectures for meta-RL
+Duan, Schulman, Chen, Bartlett, Sutskever, Abbeel. RL2: 
+Fast Reinforcement Learning via Slow Reinforcement 
+Learning. 2016.
+standard RNN (LSTM) architecture
+attention + temporal convolution
+Mishra, Rohaninejad, Chen, Abbeel. A Simple 
+Neural Attentive Meta-Learner.
+Rakelly*, Zhou*, Quillen, Finn, Levine. Efficient Off-Policy Meta-
+Reinforcement learning via Probabilistic Context Variables.
+parallel permutation-invariant context encoder
+
+
+MAML for RL
+
+
+MAML for RL videos
+after MAML training
+after 1 gradient step
+(forward reward)
+after 1 gradient step
+(backward reward)

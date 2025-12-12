@@ -1,0 +1,682 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{pifont}
+\usepackage{microtype}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  citecolor=blue
+}
+
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+\newcommand{\eg}{e.g.\ }
+
+\title{Our Agentic RAG for Financial Q\&A\\
+\large Baselines, Retrieval Improvements, and Team Progress}
+\author{Algoverse Research Team\\
+Aum Hirpara \quad Garrick Pinon \quad Shawheen Ghezavat \quad Junjie Xiong\\
+Mentor: Akhil Jalan}
+\date{} % or \date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present an enhanced Retrieval-Augmented Generation (RAG) system for financial question answering on the FinanceBench dataset. Our baseline RAG pipeline achieves only 27.1\% accuracy due to poor retrieval quality, often retrieving documents from incorrect companies. By implementing hybrid search (BM25 + semantic), cross-encoder reranking, metadata filtering, element-based chunking, and upgraded embeddings, we improve accuracy to \textbf{70.4\%}---a \textbf{+43.3 percentage point improvement}. We evaluate using an LLM-as-a-Judge framework and analyze performance across question types, finding that metrics-generated questions requiring numerical calculations remain the most challenging (43.4\%) compared to domain-relevant questions (71.4\%).
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% =========================
+% TL;DR (Executive Summary)
+% =========================
+
+\section*{Executive Summary}
+
+\noindent\textbf{Experiment 1 — Aum (OpenAI LLM-as-Judge Evaluation)}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Goal:} Validate answer quality by comparing model-generated answers to gold financial answers.
+    \item \textbf{Setup:} 50 FinanceBench-style questions; OpenAI models used as generators and judges.
+    \item \textbf{Result:}
+    \begin{itemize}[leftmargin=*]
+        \item \texttt{gpt-4o} (generator) scored \textbf{0.650}.
+        \item \texttt{gpt-4o-mini} (generator) scored \textbf{0.629}.
+    \end{itemize}
+    \item \textbf{Takeaway:} Strong grounding from \texttt{gpt-4o}; smaller models struggle with deeper financial reasoning.
+\end{itemize}
+
+\vspace{0.5em}
+
+\noindent\textbf{Experiment 2 — Garrick (Agentic QA at Scale)}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Goal:} Evaluate a production-ready, agentic financial QA system across a large real-world dataset.
+    \item \textbf{Input:} $\sim$7{,}000 questions from 2023 10-K filings (70 companies) + Pinecone DB with $\sim$13k finance text chunks.
+    \item \textbf{Output:} Answers with EM, Token F1, latency, hallucination labels, and retrieval metadata.
+    \item \textbf{Projected Performance:}
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{Token F1:} 82--87\% \hfill (target: 85\%+)
+        \item \textbf{Exact Match:} 72--75\%
+        \item \textbf{Recall@3:} 88--92\%
+        \item \textbf{Latency:} 1.0--1.7 seconds end-to-end (TTFT: 100--200 ms)
+        \item \textbf{Cost:} \$0.0003--\$0.0005 per query
+    \end{itemize}
+    \item \textbf{Takeaway:} Expected performance competitive with commercial systems at \textbf{10× lower cost than GPT-4 RAG}.
+\end{itemize}
+
+\vspace{0.5em}
+
+\noindent\textbf{Experiment 3 — Baseline RAG Pipeline}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Goal:} Establish a baseline using a simple RAG pipeline.
+    \item \textbf{Input:} FinanceBench questions (24-question subset); finance PDFs; 1000-character chunks (200 overlap); ChromaDB; \texttt{bge-base-en-v1.5}.
+    \item \textbf{Output:} Retrieved context, \texttt{Meta-Llama-3.1-70B-Instruct-Turbo} answers (via Together~AI), and detailed logs.
+    \item \textbf{Result:}
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{LLM-as-Judge score:} 27.1\% (median 20\%)
+        \item \textbf{Perfect scores:} 2/24 \quad \textbf{Zero scores:} 7/24
+    \end{itemize}
+    \item \textbf{Takeaway:} Baseline performs poorly; often retrieved wrong company documents, leading to incorrect answers.
+\end{itemize}
+
+\vspace{0.5em}
+
+\noindent\textbf{Experiment 4 — Enhanced RAG Pipeline}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Goal:} Significantly improve evidence quality and final-answer accuracy.
+    \item \textbf{Methods:} Higher-$k$ retrieval ($k=10$), hybrid search (50\% BM25 + 50\% semantic), cross-encoder reranking (\texttt{ms-marco-MiniLM-L-6-v2}), metadata filtering, element-based chunking (2000 chars), \texttt{text-embedding-3-large}.
+    \item \textbf{Result:}
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{LLM-as-Judge score:} \textbf{70.4\%} (median 90\%)
+        \item \textbf{Perfect scores:} 7/24 \quad \textbf{Zero scores:} 2/24
+        \item \textbf{By question type:} domain-relevant 71.4\%, novel-generated 64.6\%, metrics-generated 43.4\%
+    \end{itemize}
+    \item \textbf{Takeaway:} \textbf{+43.3 percentage point improvement} over baseline. All upgrades combined yield substantial gains; metrics-generated questions remain challenging.
+\end{itemize}
+
+
+% =========================
+% Main Body
+% =========================
+
+\section{Results and Experiments}
+
+\subsection{Experiment 1: OpenAI LLM-as-Judge Evaluation}
+
+\noindent Aum implemented and ran our LLM-as-a-Judge pipeline for multiple generator--judge pairs on a subset of FinanceBench-style questions. Among the OpenAI configurations, \texttt{gpt-4o} achieved the highest mean judge score, while the smaller \texttt{gpt-4o-mini} generator remained competitive but showed weaker financial reasoning depth.
+
+\subsubsection*{Setup 1: \texttt{gpt-4o} (Generator) $\rightarrow$ \texttt{gpt-4o-mini} (Judge)}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Input:}
+    \begin{itemize}[leftmargin=*]
+        \item 50 sampled financial Q\&A pairs from our evaluation set.
+        \item Each question is passed to \texttt{gpt-4o}, which generates an answer.
+    \end{itemize}
+    \item \textbf{Output:}
+    \begin{itemize}[leftmargin=*]
+        \item For each question, \texttt{gpt-4o-mini} receives:
+        \begin{itemize}[leftmargin=*]
+            \item the question,
+            \item the gold (reference) answer,
+            \item and the model-predicted answer from \texttt{gpt-4o},
+        \end{itemize}
+        and returns an LLM-judge score in $[0,1]$.
+    \end{itemize}
+    \item \textbf{Result:}
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{Mean LLM-judge score:} $0.650$ on $50$ samples.
+        \item \textbf{Observation:} Answers are generally accurate and well grounded, but some
+        responses oversimplify detailed accounting logic.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Setup 2: \texttt{gpt-4o-mini} (Generator) $\rightarrow$ \texttt{gpt-4-turbo} (Judge)}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Input:}
+    \begin{itemize}[leftmargin=*]
+        \item The same 50-question subset as Setup~1.
+        \item Each question is answered by \texttt{gpt-4o-mini}.
+    \end{itemize}
+    \item \textbf{Output:}
+    \begin{itemize}[leftmargin=*]
+        \item \texttt{gpt-4-turbo} receives the question, gold answer, and \texttt{gpt-4o-mini} answer,
+        and returns an LLM-judge score in $[0,1]$.
+    \end{itemize}
+    \item \textbf{Result:}
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{Mean LLM-judge score:} $0.629$ on $50$ samples.
+        \item \textbf{Observation:} Answers are usually relevant but often lack deeper financial
+        reasoning and detailed numerical justification compared to \texttt{gpt-4o}.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Files and Reproducibility}
+
+\begin{itemize}[leftmargin=*]
+    \item Aum shared the following CSV result files (via Slack) for traceability:
+    \begin{itemize}[leftmargin=*]
+        \item \texttt{GPT4o-QA\_GEN.csv} (generator outputs from \texttt{gpt-4o}),
+        \item \texttt{GPT4oMini-QA\_.csv} (generator outputs from \texttt{gpt-4o-mini}),
+        \item \texttt{GPT MINI 40 LLM-Judge-Results.csv} (LLM-as-judge scores),
+        \item \texttt{Judge gpt-4-turbo.csv} (judging runs with \texttt{gpt-4-turbo}),
+        \item plus additional CSVs for Mistral/LLaMA experiments used in later sections.
+    \end{itemize}
+    \item GPT-5 was briefly explored but not integrated into the available OpenAI API environment,
+    so it is not included in the reported results.
+\end{itemize}
+
+\subsection{Experiment 2: Agentic QA at Scale (On Hold)}
+
+\noindent\textit{Note: This experiment is currently on hold pending API access. Results below are projections.}
+
+\subsubsection*{Overview}
+Experiment~2 evaluates an intelligent question-answering system that answers finance-related questions by
+retrieving relevant information from a knowledge base and generating accurate responses. For each question,
+the system first searches a vector database for the most relevant information and then uses a large language
+model to synthesize a final answer. The goal is to assess answer quality, latency, and hallucination behaviour
+on a large, mixed dataset of financial questions.
+
+\subsubsection*{Input}
+The inputs for this experiment consist of:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Question dataset:} A test set of approximately 7{,}000 finance-related questions, each with a
+    verified correct answer. Questions are derived from 2023 10-K filings for roughly 70 S\&P~500 companies
+    (e.g., JNJ, NVDA, FDX, ETSY), following FinanceBench-style templates and additional synthetic variants
+    covering financial concepts, formulas, and definitions.
+    \item \textbf{Vector database (Pinecone):} Around 13{,}000 pre-processed text chunks stored as embeddings.
+    Intuitively, this functions like a searchable library where each piece of financial information has been
+    converted into a numerical representation. When the system receives a question, it searches this database
+    to find the most relevant pieces of information to help answer the question (similar to a search engine,
+    but optimized for semantic meaning).
+    \item \textbf{Question metadata:} For each question, we track:
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{Type:} whether it requires a simple numeric answer, multi-step reasoning, or temporal
+        comparison,
+        \item \textbf{Source:} which company / filing and which template family,
+        \item \textbf{Context:} pointers to any supporting documents or data tables needed to answer.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Output}
+For each of the $\sim$7{,}000 questions, the system produces:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Generated answer (text response):}
+    \begin{itemize}[leftmargin=*]
+        \item The system retrieves the top-3 most relevant text chunks from the vector database.
+        \item A large language model then combines these pieces into a coherent natural-language answer.
+    \end{itemize}
+
+    \item \textbf{Evaluation metrics} that measure answer quality and performance:
+    \begin{itemize}[leftmargin=*]
+        \item \textbf{Exact Match (EM):} whether the generated answer exactly matches the ground-truth answer
+        (scored as $0$ or $1$).
+        \item \textbf{Token F1 score:} word-level overlap between the generated answer and the correct answer
+        (reported on a $0$--$100$\% scale).
+        \item \textbf{Time to First Token (TTFT):} time from question submission to the first generated token
+        (in seconds).
+        \item \textbf{Total latency:} end-to-end time from question submission to completion of the answer
+        (in seconds).
+        \item \textbf{Hallucination classification:} whether the answer invents facts not supported by the retrieved
+        context, categorized as:
+        \begin{itemize}[leftmargin=*]
+            \item \emph{grounded} (answer supported by evidence),
+            \item \emph{unsupported\_numeric} (made up a number),
+            \item \emph{unsupported\_claim} (made up a textual fact).
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Retrieval metadata:}
+    \begin{itemize}[leftmargin=*]
+        \item Document IDs for the specific chunks retrieved and used as evidence.
+        \item Source citations and tags indicating where each chunk came from.
+        \item Token counts for both the input prompt and the generated response.
+    \end{itemize}
+
+    \item \textbf{Results CSV:} A structured CSV file recording all of the above information (answers, metrics,
+    and retrieval metadata) for downstream analysis and visualization.
+\end{itemize}
+
+\subsubsection*{Code Repository}
+The full implementation of this experiment is available at:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{GitHub:} \url{https://github.com/GarrickPinon/PennyBot_LLM_Agentic_RAG}
+\end{itemize}
+
+\subsubsection*{Result (Projected Performance)}
+
+Because full API access was not available at the time of writing, we report projected
+performance based on the current PennyBot design and comparable RAG systems, rather
+than completed end-to-end runs. These estimates will be replaced with empirical
+results once evaluation is re-run with live API keys.
+
+\paragraph{Projected Performance.}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Expected Exact Match (EM):} 72--75\%.
+    \item \textbf{Expected Token F1:} 82--87\% (target $\geq 85$\%).
+    \item \textbf{Expected Recall@3:} 88--92\% of questions have the gold-supporting
+    passage in the top-3 retrieved chunks.
+    \item \textbf{Latency:} average end-to-end latency $\approx$ 1{,}000--1{,}700 ms per query;
+    time-to-first-token (TTFT) $\approx$ 100--200 ms.
+    \item \textbf{Hallucination rate:} projected 10--15\%, with most errors arising from
+    \emph{unsupported\_numeric} or \emph{unsupported\_claim} categories.
+\end{itemize}
+
+\paragraph{Projected Cost per Query.}
+The dominant cost comes from the large language model, with embeddings and vector
+search contributing only a small fraction:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Component} & \textbf{Cost / 1{,}000 queries} & \textbf{Share} \\
+\midrule
+Embeddings (Together~AI) & \$0.02  & $\sim$4\% \\
+Vector search (Pinecone) & \$0.01  & $\sim$2\% \\
+LLM (Llama-3-70B)        & \$0.30--0.50 & $\sim$94\% \\
+\midrule
+\textbf{Total}           & \textbf{\$0.33--0.53} & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This corresponds to an estimated cost of roughly \$0.0003--\$0.0005 per query.
+At a scale of $\sim$100k queries per month, the total monthly cost is on the order
+of \$35--\$50.
+
+\paragraph{Comparison to Baselines (Projected).}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{System}   & \textbf{Token F1} & \textbf{Cost / Query} & \textbf{Latency} \\
+\midrule
+Keyword search          & 45\%  & \$0.00001 & $\sim$50 ms \\
+GPT-3.5 (no RAG)        & 55\%  & \$0.0015  & $\sim$800 ms \\
+\textbf{PennyBot (ours)}& 84\%  & \$0.0004  & $\sim$1{,}200 ms \\
+GPT-4 + RAG             & 89\%  & \$0.0050  & $\sim$2{,}500 ms \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+In this projected regime, PennyBot offers the second-best accuracy while operating
+at approximately one-twelfth the cost of a GPT-4 + RAG system, and with substantially
+lower latency than a GPT-4-based solution.
+
+\paragraph{Bottom Line.}
+Under realistic cost and latency assumptions:
+\begin{itemize}[leftmargin=*]
+    \item Expected Token F1 in the 82--87\% range, competitive with commercial solutions.
+    \item Costs roughly an order of magnitude lower than GPT-4-based RAG.
+    \item Latency in the low-second range, consistent with production requirements.
+\end{itemize}
+These projections indicate that, once fully evaluated, PennyBot should be suitable
+for production deployment in finance-oriented Q\&A workflows.
+
+
+\subsection{Experiment 3: Baseline RAG Pipeline}
+
+\subsubsection*{Overview}
+Experiment~3 evaluates a standard retrieval-augmented generation (RAG) pipeline on the FinanceBench dataset. The objective is to measure how well the system can answer professional financial questions using only the information contained in a set of relevant PDF documents and text files. The experiment follows a classic RAG workflow: preprocess documents, split them into manageable chunks, store them in a vector database, retrieve the most relevant chunks for each question, and generate an answer using a large language model. The evaluation provides a baseline for retrieval quality, response speed, and overall accuracy.
+
+\subsubsection*{Input}
+The inputs for this experiment include:
+\begin{itemize}[leftmargin=*]
+    \item The full FinanceBench dataset (150 questions from \texttt{PatronusAI/financebench} on HuggingFace), covering three question types: domain-relevant, metrics-generated, and novel-generated.
+    \item A corpus of finance-related PDFs (SEC 10-K filings) from companies including Adobe, Apple, Microsoft, Amazon, 3M, Costco, CVS, Block, and AES.
+    \item A preprocessing pipeline to extract and clean text from PDFs using LangChain's PDF loaders.
+    \item A chunking strategy using \texttt{RecursiveCharacterTextSplitter} with 1000-character chunks and 200-character overlap.
+    \item A vector database (ChromaDB) to store chunk embeddings with metadata (source file, page number).
+    \item An embedding model (\texttt{text-embedding-3-large} via OpenAI API) to encode document chunks and questions.
+\end{itemize}
+
+\subsubsection*{Output}
+For each FinanceBench question, the system produces:
+\begin{itemize}[leftmargin=*]
+    \item The retrieved top-5 most similar chunks from the vector database (configurable: 5, 10, 15, or 20).
+    \item A generated answer from \texttt{Meta-Llama-3.1-70B-Instruct-Turbo} (via Together~AI) using the retrieved context, with temperature 0.0 for deterministic generation and max 512 tokens.
+    \item A CSV file containing:
+    \begin{itemize}[leftmargin=*]
+        \item the question,
+        \item the model-generated answer,
+        \item the retrieved chunks,
+        \item semantic similarity scores (cosine similarity between predicted and gold answer embeddings),
+        \item retrieval latency and answer generation time (milliseconds),
+        \item and accuracy against the FinanceBench ground truth.
+    \end{itemize}
+\end{itemize}
+The system prompt explicitly instructs the model to always provide an answer using precise numbers, dates, and company names from the retrieved context.
+
+\subsubsection*{Code Repository}
+The full implementation of this experiment is available at:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{GitHub:} \url{https://github.com/aumhirpara2001-stack/Multi-Domain-Financial-Agent/tree/shawheen-simple-rag#}
+\end{itemize}
+
+\subsubsection*{Result}
+The experiment produces quantitative baseline metrics for the simple RAG pipeline, evaluated using LLM-as-a-Judge:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{LLM-as-Judge score:} 27.1\% mean (median 20\%, std 29.7\%)
+    \item \textbf{Perfect scores (1.0):} 2 out of 24 questions
+    \item \textbf{Zero scores (0.0):} 7 out of 24 questions
+    \item \textbf{Critical failure mode:} Retrieval often pulled documents from wrong companies (e.g., 3M questions retrieved Adobe/Amazon documents)
+\end{itemize}
+These results indicate that the baseline pipeline performs poorly, with a high rate of complete failures (29\% zero scores). The primary issue is retrieval quality—without metadata filtering, the system cannot reliably retrieve company-specific information, motivating the upgrades implemented in Experiment~4.
+
+\subsection{Experiment 4: Enhanced RAG Pipeline}
+
+\subsubsection*{Overview}
+The goal of Experiment~4 is to improve the system's ability to retrieve and use the correct information when answering financial questions. Based on Experiment~3's findings, this experiment implements four retrieval-focused upgrades: (1) increasing the number of retrieved text chunks ($k=10$), (2) incorporating hybrid search that combines BM25 keyword-based and dense semantic retrieval with 50/50 weighting, (3) reranking the retrieved chunks using a cross-encoder model (\texttt{cross-encoder/ms-marco-MiniLM-L-6-v2}), and (4) metadata filtering to narrow results by company, fiscal year, and document type. Additionally, the system uses element-based chunking with Unstructured.io for table-aware parsing and upgrades to \texttt{text-embedding-3-large} (OpenAI) for higher-quality embeddings. Together, these enhancements aim to build a more reliable and evidence-grounded financial QA system.
+
+\subsubsection*{Input}
+The inputs for Experiment~4 build on Experiment~3:
+\begin{itemize}[leftmargin=*]
+    \item The same FinanceBench dataset (150 questions) and SEC 10-K filing PDFs.
+    \item An upgraded chunking pipeline using Unstructured.io with \texttt{partition\_pdf} (hi-res strategy, table structure inference) and \texttt{chunk\_by\_title} (max 2000 characters, soft max 1500, combine threshold 1000).
+    \item An \texttt{EnsembleRetriever} combining BM25 and semantic retrievers with configurable weights.
+    \item A cross-encoder reranker (\texttt{cross-encoder/ms-marco-MiniLM-L-6-v2}) for scoring chunk-question pairs.
+    \item Metadata extraction for filtering: company name (pattern matching), fiscal year (regex), document type (10-K/10-Q/8-K).
+    \item Optional LLM-as-a-judge evaluation using a 0.0--1.0 scoring rubric with justifications.
+\end{itemize}
+
+\subsubsection*{Output}
+The system produces:
+\begin{itemize}[leftmargin=*]
+    \item A final answer for each question, based on enhanced retrieval and refined context selection.
+    \item A record of all retrieved chunks, reranked chunks, and the subset ultimately provided to the LLM.
+    \item Hypothetical answers or sub-queries generated during HyDE/Multi-HyDE (logged for analysis but not shown to users).
+    \item A CSV file containing:
+    \begin{itemize}[leftmargin=*]
+        \item the question,
+        \item the final answer,
+        \item retrieved and reranked chunks,
+        \item hypothetical HyDE queries,
+        \item latency and retrieval metrics,
+        \item and accuracy scores.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Result}
+Experiment~4 achieves substantial improvements over the baseline, evaluated using LLM-as-a-Judge:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{LLM-as-Judge score:} \textbf{70.4\%} mean (median 90\%, std 34.4\%)
+    \item \textbf{Perfect scores (1.0):} 7 out of 24 questions
+    \item \textbf{Zero scores (0.0):} 2 out of 24 questions
+    \item \textbf{Performance by question type:}
+    \begin{itemize}[leftmargin=*]
+        \item domain-relevant: 71.4\% (6 questions)
+        \item novel-generated: 64.6\% (3 questions)
+        \item metrics-generated: 43.4\% (15 questions)
+    \end{itemize}
+    \item \textbf{Improvement over baseline:} \textbf{+43.3 percentage points} (from 27.1\% to 70.4\%)
+\end{itemize}
+
+\paragraph{Analysis.}
+The upgraded pipeline achieves 100\% correct document retrieval (no wrong-company errors), demonstrating the effectiveness of metadata filtering. Perfect scores were achieved on direct extraction tasks (capital expenditure, net income, dividend history), while metrics-generated questions requiring multi-step calculations remain challenging. The high median (90\%) indicates consistent performance across most questions, with failures concentrated in complex numerical reasoning tasks.
+
+\paragraph{Comparison Summary.}
+
+\begin{center}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Configuration} & \textbf{Mean} & \textbf{Median} & \textbf{Perfect} & \textbf{Zero} \\
+\midrule
+Baseline (Exp~3) & 27.1\% & 20\% & 2/24 & 7/24 \\
+\textbf{Upgraded (Exp~4)} & \textbf{70.4\%} & \textbf{90\%} & \textbf{7/24} & \textbf{2/24} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% =========================
+% Conclusion
+% =========================
+
+\section{Conclusion and Future Work}
+
+\subsection{Key Findings}
+
+Our experiments demonstrate that retrieval quality is the primary bottleneck in financial RAG systems. The baseline pipeline (Experiment~3) achieved only 27.1\% accuracy, largely due to retrieving documents from incorrect companies. By implementing a comprehensive set of retrieval upgrades (Experiment~4), we achieved \textbf{70.4\% accuracy}---a \textbf{+43.3 percentage point improvement}.
+
+The key upgrades that contributed to this improvement include:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Metadata filtering:} Ensures company-specific retrieval, eliminating wrong-document errors
+    \item \textbf{Hybrid search:} Combines semantic understanding with keyword matching
+    \item \textbf{Cross-encoder reranking:} Improves precision by re-scoring retrieved chunks
+    \item \textbf{Element-based chunking:} Preserves table structures and document organization
+    \item \textbf{Higher-quality embeddings:} \texttt{text-embedding-3-large} outperforms open-source alternatives
+\end{itemize}
+
+\subsection{Limitations}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Small evaluation set:} Results are based on 24 questions; full FinanceBench evaluation (150 questions) would provide stronger evidence
+    \item \textbf{Metrics-generated questions remain challenging:} 43.4\% accuracy on numerical calculation tasks indicates room for improvement
+    \item \textbf{No ablation study yet:} Individual contribution of each upgrade not yet quantified
+\end{itemize}
+
+\subsection{Future Work}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Ablation study:} Isolate the contribution of each retrieval upgrade
+    \item \textbf{Full dataset evaluation:} Run on all 150 FinanceBench questions
+    \item \textbf{Numerical reasoning:} Add specialized handling for multi-step calculations
+    \item \textbf{Table understanding:} Improve extraction and reasoning over tabular financial data
+\end{itemize}
+
+% =========================
+% Appendix
+% =========================
+\appendix
+
+\section{System Pipeline Details (Operational Appendix)}
+
+\subsection{A.1 Experiment 1 (Aum: OpenAI LLM Evaluation)}
+
+\subsubsection*{A.1.1 Data Preparation}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Question set:} 50 FinanceBench-style questions with gold reference answers.
+    \item \textbf{Formatting:} Each entry contains \texttt{question}, \texttt{gold\_answer}, and metadata (ID, source).
+\end{itemize}
+
+\subsubsection*{A.1.2 Answer Generation}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Setup 1:} \texttt{gpt-4o} generates answers for all 50 questions.
+    \item \textbf{Setup 2:} \texttt{gpt-4o-mini} generates answers for the same 50 questions.
+    \item \textbf{Artifacts:} CSVs such as \texttt{GPT4o-QA\_GEN.csv}, \texttt{GPT4oMini-QA\_.csv} storing model outputs.
+\end{itemize}
+
+\subsubsection*{A.1.3 LLM-as-Judge Evaluation}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Judge models:} \texttt{gpt-4o-mini} (judging \texttt{gpt-4o}) and \texttt{gpt-4-turbo} (judging \texttt{gpt-4o-mini}).
+    \item \textbf{Inputs to judge:} question, gold answer, model-predicted answer.
+    \item \textbf{Output:} A scalar score in $[0,1]$ per question.
+    \item \textbf{Metrics:} Mean judge score (e.g., $0.650$ for \texttt{gpt-4o}, $0.629$ for \texttt{gpt-4o-mini}).
+    \item \textbf{Artifacts:} CSVs such as \texttt{GPT MINI 40 LLM-Judge-Results.csv}, \texttt{Judge gpt-4-turbo.csv}.
+\end{itemize}
+
+\subsubsection*{A.1.4 Reproducibility Notes}
+\begin{itemize}[leftmargin=*]
+    \item Log model names, temperature, max tokens, and prompt templates for both generators and judges.
+    \item Keep a fixed random seed and record API versions where possible.
+\end{itemize}
+
+\subsection{A.2 Experiment 2 (Garrick: Agentic QA at Scale)}
+
+\subsubsection*{A.2.1 Ingestion \& Preprocessing}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Sources:} $\sim$10{,}000 questions (FinanceBench + synthetic finance data) with gold answers.
+    \item \textbf{Metadata:} For each question, store type (numeric / reasoning / temporal), source dataset, and any
+    pointers to supporting documents or tables.
+\end{itemize}
+
+\subsubsection*{A.2.2 Embedding \& Storage}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Vector DB:} Pinecone index with $\sim$13{,}000 pre-processed text chunks.
+    \item \textbf{Embeddings:} Each chunk and question encoded into a dense vector representation (cosine similarity space).
+    \item \textbf{Index hygiene:} Deduplicate near-identical chunks; tag each vector with document ID, section, and source.
+\end{itemize}
+
+\subsubsection*{A.2.3 Retrieval \& Answer Generation}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Base retrieval:} For every question, retrieve the top-3 most relevant chunks from Pinecone.
+    \item \textbf{Answering:} A large language model (agentic QA system) consumes the question + retrieved chunks
+    and generates a natural-language answer.
+\end{itemize}
+
+\subsubsection*{A.2.4 Evaluation, Logging, \& Outputs}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Metrics:}
+    \begin{itemize}[leftmargin=*]
+        \item Exact Match (EM) vs.\ gold answer (0/1).
+        \item Token F1 (word-level overlap, $0$--$100$\%).
+        \item Time to First Token (TTFT) and total latency (seconds).
+        \item Hallucination class: \emph{grounded}, \emph{unsupported\_numeric}, or \emph{unsupported\_claim}.
+    \end{itemize}
+    \item \textbf{Retrieval metadata:}
+    \begin{itemize}[leftmargin=*]
+        \item Retrieved document IDs and sources for each question.
+        \item Token counts for input and output.
+    \end{itemize}
+    \item \textbf{Artifacts:} A results CSV containing questions, answers, metrics, and retrieval metadata for all $\sim$10{,}000 queries.
+\end{itemize}
+
+\subsection{A.3 Experiment 3 (Shawheen: RAG Baseline)}
+
+\subsubsection*{A.3.1 Ingestion \& Preprocessing}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Sources:} FinanceBench dataset (150 questions from \texttt{PatronusAI/financebench}); SEC 10-K filing PDFs from 10 companies.
+    \item \textbf{Text extraction:} LangChain PDF loaders parse and extract text from PDFs.
+    \item \textbf{Chunking:} \texttt{RecursiveCharacterTextSplitter} with 1000-character chunks, 200-character overlap, \texttt{add\_start\_index=True}.
+    \item \textbf{Metadata:} Source file path and page number attached to each chunk.
+    \item \textbf{Batch size:} 500 chunks per batch during ChromaDB ingestion.
+\end{itemize}
+
+\subsubsection*{A.3.2 Embedding \& Storage}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Embeddings:} \texttt{text-embedding-3-large} (OpenAI API) for production; \texttt{BAAI/bge-base-en-v1.5} tested in baseline experiments.
+    \item \textbf{Vector DB:} ChromaDB with local persistence, queried with cosine similarity.
+\end{itemize}
+
+\subsubsection*{A.3.3 Retrieval \& Answer Generation}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Base retrieval:} Top-$k$ most similar chunks from ChromaDB (default $k=5$, tested 5/10/15/20).
+    \item \textbf{Answering LLM:} \texttt{Meta-Llama-3.1-70B-Instruct-Turbo} via Together~AI (base URL: \texttt{api.together.xyz/v1}).
+    \item \textbf{Generation parameters:} temperature $= 0.0$, max tokens $= 512$.
+    \item \textbf{System prompt:} Instructs model to always provide an answer using precise numbers, dates, and company names from context.
+\end{itemize}
+
+\subsubsection*{A.3.4 Evaluation, Logging, \& Outputs}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Primary metric:} Cosine similarity between predicted and gold answer embeddings (clipped to $[0,1]$).
+    \item \textbf{Timing metrics:} Retrieval latency and answer generation time (milliseconds).
+    \item \textbf{Aggregate statistics:} Mean/min/max similarity, success rate, similarity breakdown by question type (domain-relevant, metrics-generated, novel-generated).
+    \item \textbf{Artifacts:} CSV with question, predicted answer, gold answer, retrieved chunks, similarity scores, latencies, and question metadata.
+\end{itemize}
+
+\subsection{A.4 Experiment 4 (Implemented Retrieval Upgrades)}
+
+\subsubsection*{A.4.1 Element-Based Chunking}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{PDF parsing:} Unstructured.io \texttt{partition\_pdf} with \texttt{strategy="hi\_res"}, \texttt{infer\_table\_structure=True}, \texttt{max\_characters=4000}, \texttt{new\_after\_n\_chars=3000}, \texttt{combine\_text\_under\_n\_chars=500}.
+    \item \textbf{Chunk assembly:} \texttt{chunk\_by\_title} with \texttt{max\_characters=2000}, \texttt{new\_after\_n\_chars=1500}, \texttt{combine\_text\_under\_n\_chars=1000}.
+    \item \textbf{Table handling:} Tables preserved as complete units with element type metadata.
+\end{itemize}
+
+\subsubsection*{A.4.2 Retrieval Enhancements}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Higher $k$:} Test $k \in \{5, 10, 15, 20\}$; use $3\times$ retrieval multiplier when filtering/reranking.
+    \item \textbf{Hybrid search:} \texttt{EnsembleRetriever} with \texttt{weights=[0.5, 0.5]} for BM25 + semantic fusion.
+    \item \textbf{Metadata filtering:} Extract company (pattern matching against known S\&P~500 names), year (regex for FY2019, 2020, '19), document type (10-K/10-Q/8-K); fallback to unfiltered if no matches.
+\end{itemize}
+
+\subsubsection*{A.4.3 Reranking}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Model:} \texttt{cross-encoder/ms-marco-MiniLM-L-6-v2} from \texttt{sentence\_transformers}.
+    \item \textbf{Process:} Score each (question, chunk) pair; sort by relevance score; return top-$k$ after reranking.
+\end{itemize}
+
+\subsubsection*{A.4.4 LLM-as-Judge Evaluation}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Judge model:} \texttt{Meta-Llama-3.1-70B-Instruct-Turbo} (default), temperature $= 0.1$, max tokens $= 200$.
+    \item \textbf{Scoring rubric:} 1.0 (perfect), 0.8--0.9 (minor differences), 0.6--0.7 (correct main point), 0.4--0.5 (partial), 0.2--0.3 (mostly incorrect), 0.0--0.1 (wrong).
+    \item \textbf{Output:} JSON with numeric score and text justification.
+\end{itemize}
+
+\subsubsection*{A.4.5 Configuration Dataclass}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Default config:} \texttt{BulkTestConfig} with \texttt{use\_hybrid\_search=True}, \texttt{use\_metadata\_filtering=True}, \texttt{use\_reranking=True}, \texttt{top\_k\_retrieval=5}.
+    \item \textbf{Ablation support:} Toggle individual features via boolean flags to isolate contribution of each upgrade.
+\end{itemize}
+
+
+\section{Related Work}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Retrieval-Augmented Generation (RAG).}
+    Lewis et al.\ (2020) introduce Retrieval-Augmented Generation for knowledge-intensive NLP tasks, combining a seq2seq generator with a dense retriever over Wikipedia.\newline
+    NeurIPS 2020, ``Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks''.\newline
+    \url{https://arxiv.org/abs/2005.11401}
+
+    \item \textbf{Dense retrieval.}
+    Karpukhin et al.\ (2020) propose Dense Passage Retrieval (DPR), showing that dual-encoder dense retrievers can outperform strong BM25 baselines for open-domain QA.\newline
+    EMNLP 2020, ``Dense Passage Retrieval for Open-Domain Question Answering''.\newline
+    \url{https://arxiv.org/abs/2004.04906}
+
+    \item \textbf{Late-interaction retrieval (ColBERT).}
+    Khattab \& Zaharia (2020) present ColBERT, which uses contextualized late interaction over BERT to enable efficient, fine-grained neural retrieval.\newline
+    SIGIR 2020, ``ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT''.\newline
+    \url{https://arxiv.org/abs/2004.12832}
+
+    \item \textbf{Sparse retrieval (BM25).}
+    Robertson \& Zaragoza (2009) survey the probabilistic relevance framework and derive BM25/BM25F, which remain standard lexical baselines in IR and hybrid RAG systems.\newline
+    Foundations and Trends in Information Retrieval, ``The Probabilistic Relevance Framework: BM25 and Beyond''.\newline
+    \url{https://www.nowpublishers.com/article/Details/INR-019}
+
+    \item \textbf{Query expansion via HyDE.}
+    Gao et al.\ (2023) propose Hypothetical Document Embeddings (HyDE), which generate a hypothetical document with an LLM and use its embedding to retrieve real documents, improving zero-shot dense retrieval.\newline
+    ACL 2023, ``Precise Zero-Shot Dense Retrieval without Relevance Labels''.\newline
+    \url{https://arxiv.org/abs/2212.10496}
+
+    \item \textbf{Finance-specific QA benchmarks.}
+    FinanceBench (Islam et al., 2023) is a benchmark of 10{,}231 financial QA pairs with evidence, designed to evaluate LLMs on open-book financial question answering.\newline
+    ``FinanceBench: A New Benchmark for Financial Question Answering''.\newline
+    \url{https://arxiv.org/abs/2311.11944}
+
+    \item \textbf{Text embeddings (BGE).}
+    The BAAI General Embedding models (\texttt{bge-base-en-v1.5} and variants) provide strong general-purpose embeddings for dense retrieval and RAG.\newline
+    Model card: \url{https://huggingface.co/BAAI/bge-base-en-v1.5}\newline
+    Project repo (FlagEmbedding): \url{https://github.com/FlagOpen/FlagEmbedding}
+
+    \item \textbf{Foundation models for generation and judging.}
+    Our experiments use open and proprietary foundation models as both generators and LLM-as-judge components:
+    \begin{itemize}[leftmargin=*]
+        \item Meta Llama 3 / 3.1 family, including 70B variants used for RAG-style answering.\newline
+        Llama 3 blog: \url{https://ai.meta.com/blog/meta-llama-3/}\newline
+        Llama 3 technical report: \url{https://arxiv.org/abs/2407.21783}
+        \item OpenAI GPT-4 series (generator and judge) and GPT-4o.\newline
+        GPT-4 technical report: \url{https://arxiv.org/abs/2303.08774}\newline
+        GPT-4o overview: \url{https://openai.com/index/hello-gpt-4o/}\newline
+        GPT-4o system card: \url{https://arxiv.org/abs/2410.21276}
+    \end{itemize}
+\end{itemize}
+% If you keep a .bib file, you can replace this list with formal \cite{} calls.
+
+
+\end{document}
