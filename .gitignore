@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+logs/
+
+# Data (large files)
+*.pdf
+chroma/
+*.bin
+*.pickle
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test outputs (keep structure, ignore contents)
+bulk_runs/**/*.csv
+bulk_runs/**/*.json
+!bulk_runs/.gitkeep
