@@ -8,6 +8,9 @@ Usage:
     python src/create_database_v2.py [--sample N] [--output-dir DIR]
 """
 
+import warnings
+warnings.filterwarnings("ignore", message=".*max_size.*deprecated.*")
+
 import argparse
 import os
 import shutil
@@ -181,6 +184,18 @@ def process_pdf(pdf_path: Path) -> List[Document]:
 
     return chunks
 
+
+def save_to_chroma(chunks: List[Document], chroma_path: str):
+    """Save chunks to ChromaDB with batched embedding."""
+    import shutil
+
+    # Clear existing database
+    if os.path.exists(chroma_path):
+        print(f"Removing existing database at {chroma_path}")
+        shutil.rmtree(chroma_path)
+
+    # Get embedding model
+    embeddings = get_embedding_model(DEFAULTS.embedding_model)
 
     # Process in batches (increased for H100s)
     batch_size = 5000
