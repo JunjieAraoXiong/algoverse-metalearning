@@ -101,8 +101,8 @@ Multi-Domain-Financial-Agent/
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/aumhirpara2001-stack/Multi-Domain-Financial-Agent.git
-cd Multi-Domain-Financial-Agent
+git clone https://github.com/JunjieAraoXiong/algoverse-metalearning.git
+cd algoverse-metalearning
 git checkout features/metalearning
 
 # 2. Install RAG dependencies
