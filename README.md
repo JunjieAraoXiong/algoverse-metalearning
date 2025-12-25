@@ -9,20 +9,20 @@ A research project exploring **meta-learning for RAG pipeline selection** across
 │                        META-LEARNING FOR RAG                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   Question ──▶ META-ROUTER ──▶ Select Pipeline ──▶ Execute ──▶ Answer      │
+│   Question ──▶ META-ROUTER ──▶ Select Pipeline ──▶ Execute ──▶ Answer       │
 │                    │                                                        │
 │                    │   Learns patterns:                                     │
 │                    │   • numeric questions → hybrid_filter                  │
 │                    │   • dense prose → semantic                             │
 │                    │   • multi-hop → hybrid_filter_rerank                   │
 │                    │                                                        │
-│   ┌────────────────┴────────────────┐                                      │
-│   │         TRAINING DOMAINS        │                                      │
-│   ├─────────────┬─────────────┬─────┴─────┐                                │
-│   │  FINANCE    │  HEALTHCARE │   LEGAL   │                                │
-│   │ FinanceBench│  PubMedQA   │   CUAD    │                                │
-│   │  (tables)   │   (prose)   │ (clauses) │                                │
-│   └─────────────┴─────────────┴───────────┘                                │
+│   ┌────────────────┴────────────────┐                                       │
+│   │         TRAINING DOMAINS        │                                       │
+│   ├─────────────┬─────────────┬─────┴─────┐                                 │
+│   │  FINANCE    │  HEALTHCARE │   LEGAL   │                                 │
+│   │ FinanceBench│  PubMedQA   │   CUAD    │                                 │
+│   │  (tables)   │   (prose)   │ (clauses) │                                 │
+│   └─────────────┴─────────────┴───────────┘                                 │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -110,15 +110,19 @@ cd rag
 pip install -r requirements.txt
 
 # 3. Configure API keys
-echo "TOGETHER_API_KEY=your_key" >> .env
-echo "OPENAI_API_KEY=your_key" >> .env
+echo "TOGETHER_API_KEY=your_key" >> rag/.env
 
-# 4. Build vector database
-python src/create_database_v2.py --sample 5  # Test first
-python src/create_database_v2.py             # Full (2-4 hrs)
+# 4. Ingest Data (Fast Mode)
+# Takes ~20 minutes on cluster (skips OCR)
+cd rag
+python src/ingest.py --fast --chunk-size 1000 --batch-size 20 --data-dir /tmp/junjie_pdfs/
 
-# 5. Run evaluation
-python src/bulk_testing.py --pipeline hybrid_filter_rerank --top-k 10
+# 5. Launch Inference Server (Free H100s)
+# Starts Llama-3-70B on 8x H100s
+bash scripts/launch_vllm.sh
+
+# 6. Run evaluation
+python src/bulk_testing.py --model meta-llama/Meta-Llama-3.1-70B-Instruct --pipeline hybrid_filter_rerank --top-k 10
 ```
 
 ## Roadmap
