@@ -1,0 +1,43 @@
+# Requirements for myRAG system
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+pandas>=2.0.0
+numpy>=1.24.0
+tqdm>=4.65.0
+
+# HuggingFace datasets
+datasets>=2.14.0
+
+# LangChain and vector stores
+langchain>=0.1.0
+langchain-chroma>=0.1.0
+langchain-together>=0.1.0
+langchain-openai>=0.0.5
+langchain-text-splitters>=0.0.1
+langchain-community>=0.0.1
+langchain-core>=0.1.0
+chromadb>=0.4.0
+
+# API clients
+openai>=1.0.0
+anthropic>=0.40.0
+google-generativeai>=0.8.0
+
+# Environment management
+python-dotenv>=1.0.0
+
+# Document processing
+unstructured>=0.10.0
+unstructured[pdf]>=0.10.0
+
+# Reranking and local embeddings
+sentence-transformers>=2.2.0
+langchain-huggingface>=0.0.3
+
+# PDF processing dependencies for unstructured
+pytesseract>=0.3.10
+pillow>=10.0.0
+
+# HTML parsing for table conversion
+beautifulsoup4>=4.12.0

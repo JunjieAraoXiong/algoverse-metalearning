@@ -1,0 +1,45 @@
+{
+  "total_questions": 24,
+  "successful_predictions": 24,
+  "failed_predictions": 0,
+  "success_rate": 100.0,
+  "avg_semantic_similarity": 0.4011203012412757,
+  "min_semantic_similarity": 0.081433491469593,
+  "max_semantic_similarity": 0.8739112495014095,
+  "similarity_by_type": {
+    "domain-relevant": {
+      "mean": 0.45801722434050113,
+      "count": 6,
+      "min": 0.1000567725060454,
+      "max": 0.7690691888197783
+    },
+    "metrics-generated": {
+      "mean": 0.3923815992364775,
+      "count": 15,
+      "min": 0.081433491469593,
+      "max": 0.8739112495014095
+    },
+    "novel-generated": {
+      "mean": 0.33101996506681647,
+      "count": 3,
+      "min": 0.09105559990756074,
+      "max": 0.797085139363038
+    }
+  },
+  "avg_retrieval_time_ms": 657.3610305786133,
+  "avg_generation_time_ms": 624.0091522534689,
+  "config": {
+    "dataset_name": "financebench",
+    "model_name": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+    "embedding_model": "text-embedding-3-large",
+    "top_k_retrieval": 10,
+    "use_hybrid_search": true,
+    "use_metadata_filtering": true,
+    "use_reranking": true,
+    "temperature": 0.0,
+    "max_tokens": 512,
+    "chroma_path": "/Users/shawheen/Projects/myRAG/chroma",
+    "output_dir": "/Users/shawheen/Projects/myRAG/bulk_runs",
+    "timestamp": "2025-11-14_03-37-23"
+  }
+}

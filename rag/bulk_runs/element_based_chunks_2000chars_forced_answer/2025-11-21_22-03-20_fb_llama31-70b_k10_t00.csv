@@ -1,0 +1,253 @@
+question_id,question,gold_answer,predicted_answer,semantic_similarity,retrieval_time_ms,generation_time_ms,sources,error,question_type,company,doc_name,doc_type
+0,What is the FY2018 capital expenditure amount (in USD millions) for 3M? Give a response to the question by relying on the details shown in the cash flow statement.,$1577.00,"$1,577",0.8215874475736711,4261.8889808654785,680.9296607971191,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf,,metrics-generated,3M,3M_2018_10K,10k
+1,Assume that you are a public equities analyst. Answer the following question by primarily using information that is shown in the balance sheet: what is the year end FY2018 net PPNE for 3M? Answer in USD billions.,$8.70,$11.352 billion,0.38745246887948637,1868.4277534484863,488.9860153198242,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf,,metrics-generated,3M,3M_2018_10K,10k
+2,Is 3M a capital-intensive business based on FY2022 data?,"No, the company is managing its CAPEX and Fixed Assets pretty efficiently, which is evident from below key metrics:
+CAPEX/Revenue Ratio: 5.1%
+Fixed assets/Total Assets: 20%
+Return on Assets= 12.4%","No, 3M is not a capital-intensive business based on FY2022 data. The company's strong balance sheet and liquidity provide significant flexibility to fund its numerous opportunities going forward, and it will continue to invest in its operations to drive growth.",0.49001284963118985,470.1528549194336,680.5498600006104,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf,,domain-relevant,3M,3M_2022_10K,10k
+3,"What drove operating margin change as of FY2022 for 3M? If operating margin is not a useful metric for a company like this, then please state that and explain why.","Operating Margin for 3M in FY2022 has decreased by 1.7% primarily due to: 
+-Decrease in gross Margin
+-mostly one-off charges including Combat Arms Earplugs litigation, impairment related to exiting PFAS manufacturing, costs related to exiting Russia and divestiture-related restructuring
+charges","Operating margin change for 3M in FY2022 was driven by several factors, including:
+
+1. Declines in disposable respirator demand, which negatively impacted operating margins by 0.3 percent.
+2. Benefits from strong pricing, spending discipline, and 2021 restructuring actions, which resulted in a net year-on-year benefit of 1.3 percent to operating margins.
+3. Manufacturing headwinds from global supply chain challenges, geopolitical impacts due to the Russia/Ukraine conflict, and ongoing COVID-related challenges in China.
+4. Increased investments in growth, productivity, and sustainability.
+
+However, operating margin may not be a useful metric for a company like 3M, which has a complex business structure with multiple segments and a significant presence in various geographic regions. This is because operating margin does not capture the full picture of a company's profitability, as it does not account for non-operating items such as interest income, foreign exchange gains/losses, and other non-operating expenses.
+
+Additionally, 3M's operating margin is influenced by various special items, such as net costs for significant litigation, divestiture costs, and gain on business divestitures, which can distort the true picture of the company's underlying profitability. Therefore, it may be more useful to look at adjusted operating margin or other non-GAAP measures that exclude these special items to get a more accurate picture of 3M's profitability.",0.7582272943670421,918.9739227294922,2515.7666206359863,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf,,domain-relevant,3M,3M_2022_10K,10k
+4,"If we exclude the impact of M&A, which segment has dragged down 3M's overall growth in 2022?",The consumer segment shrunk by 0.9% organically.,"Based on the provided context, the segments that experienced a decline in sales in 2022 are Safety and Industrial (down 3.2%), Transportation and Electronics (down 3.9%), and Health Care (down 2.0%). 
+
+However, if we exclude the impact of M&A (divestitures), we can see that the organic sales change in Health Care was flat in oral care and increased in other areas, but was impacted by COVID-related trends and inflationary pressures. 
+
+In Transportation and Electronics, organic sales increased in some areas but decreased in others, and the decline was also due to weaker consumer electronics end-market demand and semiconductor supply chain constraints.
+
+In Safety and Industrial, organic sales increased in some areas but decreased in personal safety, which negatively impacted year-on-year organic growth by 4.5 percentage points.
+
+Considering the overall decline in sales and the impact of M&A, it can be inferred that the Transportation and Electronics segment has dragged down 3M's overall growth in 2022, as it experienced the largest decline in sales (3.9%) and was impacted by significant special item charges for PFAS manufacturing exit costs.",0.5563280066831556,661.2727642059326,1833.8539600372314,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf,,novel-generated,3M,3M_2022_10K,10k
+5,"Does 3M have a reasonably healthy liquidity profile based on its quick ratio for Q2 of FY2023? If the quick ratio is not relevant to measure liquidity, please state that and explain why.","No. The quick ratio for 3M was 0.96 by Jun'23 close, which needs a bit of an improvement to touch the 1x mark","The quick ratio is not explicitly provided in the context. However, we can calculate the quick ratio using the information available. The quick ratio is calculated as (Current Assets - Inventory) / Current Liabilities.
+
+From the context, we have the following information:
+Current Assets at June 30, 2023: $15,754 million
+Current Liabilities at June 30, 2023: $10,936 million
+Inventory is not explicitly provided, but we can calculate the quick ratio using the working capital information provided.
+
+Working Capital (non-GAAP measure) at June 30, 2023: $4,818 million
+Working Capital is defined as Current Assets - Current Liabilities.
+
+We can rearrange the formula to find the Current Liabilities: Current Liabilities = Current Assets - Working Capital
+Current Liabilities = $15,754 million - $4,818 million = $10,936 million (which is already provided)
+
+However, we still need the Inventory value to calculate the quick ratio. Unfortunately, the context does not provide the Inventory value.
+
+But we can look at the provided information on working capital and cash, cash equivalents, and marketable securities to assess 3M's liquidity profile. 3M had $4.3 billion of cash, cash equivalents, and marketable securities at June 30, 2023, which is a significant amount. Additionally, the company has a commercial paper program with a maximum of $5 billion outstanding and a maximum maturity of 397 days. The company also has a $4.25 billion five-year revolving credit facility expiring in 2028.
+
+Based on this information, it appears that 3M has a reasonably healthy liquidity profile, with access to significant cash and credit facilities. However, without the quick ratio, we cannot make a definitive assessment.",0.6398101581635227,495.1739311218262,2488.600015640259,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf,,domain-relevant,3M,3M_2023Q2_10Q,10q
+6,Which debt securities are registered to trade on a national securities exchange under 3M's name as of Q2 of 2023?,"Following debt securities registered under 3M's name are listed to trade on the New York Stock Exchange:
+-1.500% Notes due 2026 (Trading Symbol: MMM26)
+-1.750% Notes due 2030 (Trading Symbol: MMM30)
+-1.500% Notes due 2031 (Trading Symbol: MMM31)","1.500% Notes due 2026 (MMM26), 1.750% Notes due 2030 (MMM30), and 1.500% Notes due 2031 (MMM31)",0.7573784949773025,445.56689262390137,690.7370090484619,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf,,domain-relevant,3M,3M_2023Q2_10Q,10q
+7,Does 3M maintain a stable trend of dividend distribution?,"Yes, not only they distribute the dividends on a routine basis, 3M has also been increasing the per share dividend for consecutive 65 years","Yes, 3M maintains a stable trend of dividend distribution. The company has paid dividends since 1916 and has increased its dividend for 65 consecutive years, with the most recent increase being a 1% increase in February 2023.",0.7822548502683896,1099.6408462524414,733.7801456451416,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2023Q2_10Q.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/3M_2018_10K.pdf,,novel-generated,3M,3M_2023Q2_10Q,10q
+8,What is the FY2019 fixed asset turnover ratio for Activision Blizzard? Fixed asset turnover ratio is defined as: FY2019 revenue / (average PP&E between FY2018 and FY2019). Round your answer to two decimal places. Base your judgments on the information provided primarily in the statement of income and the statement of financial position.,24.26,"To calculate the fixed asset turnover ratio, we need to find the average PP&E (Property, Plant, and Equipment) between FY2018 and FY2019 and then divide the FY2019 revenue by this average.
+
+From the provided context, we can find the PP&E for FY2018 and FY2019 in the Consolidated Balance Sheets:
+
+At December 31, 2019: Property and equipment, net = $253 million
+At December 31, 2018: Property and equipment, net = $282 million
+
+Average PP&E = ($253 million + $282 million) / 2 = $267.5 million
+
+Now, we need to find the FY2019 revenue. From the Consolidated Statements of Operations:
+
+For the Year Ended December 31, 2019: Total net revenues = $6,489 million
+
+Fixed asset turnover ratio = FY2019 revenue / (average PP&E between FY2018 and FY2019)
+= $6,489 million / $267.5 million
+= 24.26",0.2502725640094931,1186.4030361175537,1534.132957458496,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf,,metrics-generated,Activision Blizzard,ACTIVISIONBLIZZARD_2019_10K,10k
+9,What is the FY2017 - FY2019 3 year average of capex as a % of revenue for Activision Blizzard? Answer in units of percents and round to one decimal place. Calculate (or extract) the answer from the statement of income and the cash flow statement.,1.9%,"To calculate the 3-year average of capex as a % of revenue for Activision Blizzard, we need to extract the relevant data from the statement of income and the cash flow statement.
+
+From the statement of income, we can extract the total net revenues for each year:
+
+- FY2017: $7,017 million
+- FY2018: $7,500 million
+- FY2019: $6,489 million
+
+From the cash flow statement, we can extract the capital expenditures (capex) for each year:
+
+- FY2017: $155 million
+- FY2018: $131 million
+- FY2019: $116 million
+
+Now, we can calculate the capex as a % of revenue for each year:
+
+- FY2017: ($155 million / $7,017 million) * 100% ≈ 2.2%
+- FY2018: ($131 million / $7,500 million) * 100% ≈ 1.7%
+- FY2019: ($116 million / $6,489 million) * 100% ≈ 1.8%
+
+Finally, we can calculate the 3-year average of capex as a % of revenue:
+
+(2.2% + 1.7% + 1.8%) / 3 ≈ 1.9%
+
+So, the FY2017 - FY2019 3-year average of capex as a % of revenue for Activision Blizzard is approximately 1.9%.",0.2763342451791896,1219.8619842529297,2546.489953994751,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ACTIVISIONBLIZZARD_2019_10K.pdf,,metrics-generated,Activision Blizzard,ACTIVISIONBLIZZARD_2019_10K,10k
+10,You are an investment banker and your only resource(s) to answer the following question is (are): the statement of financial position and the cash flow statement. Here's the question: what is the FY2015 operating cash flow ratio for Adobe? Operating cash flow ratio is defined as: cash from operations / total current liabilities. Round your answer to two decimal places.,0.66,"To calculate the FY2015 operating cash flow ratio for Adobe, we need to find the cash from operations and total current liabilities.
+
+From the context, we know that the net cash provided by operating activities for fiscal 2015 is $1.47 billion.
+
+However, the context does not provide the total current liabilities directly. We can try to find it from the given information.
+
+The context provides the following information for fiscal 2015:
+
+- Increase in deferred revenue
+- Increase in income taxes payable
+- Increase in trade payables
+- Increase in trade receivables
+
+However, it does not provide the actual values of these items. We can try to find the total current liabilities from the given information for fiscal 2013 and 2014, but it is not directly available.
+
+Since we cannot find the total current liabilities directly, we will have to make an assumption. We can assume that the total current liabilities are the sum of the changes in the working capital items mentioned in the context for fiscal 2015.
+
+However, this assumption is not accurate, and we cannot calculate the total current liabilities using this method.
+
+Given the available information, we cannot accurately calculate the FY2015 operating cash flow ratio for Adobe.
+
+However, as per the instructions, we should provide an answer. Based on the available information, we can try to make an estimate.
+
+Assuming the total current liabilities are approximately equal to the sum of the changes in the working capital items mentioned in the context for fiscal 2015, we can estimate the total current liabilities.
+
+However, this assumption is not accurate, and we cannot calculate the total current liabilities using this method.
+
+Given the available information, we can estimate the total current liabilities to be around $1.18 billion (deferred revenue) + $744.3 million (cost of revenue) + $3.15 billion (operating expenses) = $5.07 billion.
+
+However, this is not the correct method to calculate the total current liabilities.
+
+Using this estimate, we can calculate the FY2015 operating cash flow ratio for Adobe as follows:
+
+Operating cash flow ratio = Cash from operations / Total current liabilities
+= $1.47 billion / $5.07 billion
+= 0.29
+
+Please note that this is an estimate and not an accurate calculation, as we do not have the correct information to calculate the total current liabilities.
+
+0.29",0.23858685875389457,427.2921085357666,3938.9991760253906,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf,,metrics-generated,Adobe,ADOBE_2015_10K,10k
+11,What is Adobe's year-over-year change in unadjusted operating income from FY2015 to FY2016 (in units of percents and round to one decimal place)? Give a solution to the question by using the income statement.,65.4%,"To calculate the year-over-year change in unadjusted operating income from FY2015 to FY2016, we need to first calculate the operating income for both years.
+
+Operating income for FY2015 = Total revenue - Total cost of revenue - Total operating expenses
+= $4,795,511 - $744,317 - $3,148,099
+= $903,095
+
+Operating income for FY2016 = Total revenue - Total cost of revenue - Total operating expenses
+= $5,854,430 - $819,908 - $3,540,920
+= $1,493,602
+
+Now, we can calculate the year-over-year change in unadjusted operating income:
+
+Year-over-year change = ((Operating income for FY2016 - Operating income for FY2015) / Operating income for FY2015) * 100
+= (($1,493,602 - $903,095) / $903,095) * 100
+= 65.5%
+
+So, the year-over-year change in unadjusted operating income from FY2015 to FY2016 is 65.5%.",0.3121045251190549,682.4302673339844,1753.7107467651367,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2015_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2016_10K.pdf,,metrics-generated,Adobe,ADOBE_2016_10K,10k
+12,What is the FY2017 operating cash flow ratio for Adobe? Operating cash flow ratio is defined as: cash from operations / total current liabilities. Round your answer to two decimal places. Please utilize information provided primarily within the balance sheet and the cash flow statement.,0.83,"To calculate the FY2017 operating cash flow ratio for Adobe, we need to find the cash from operations and total current liabilities.
+
+From the provided context, we know that the net cash provided by operating activities for fiscal 2017 is $2.91 billion.
+
+However, the context does not provide the total current liabilities for fiscal 2017. Since we are instructed to provide an answer based on the available information, we will have to make an assumption.
+
+Unfortunately, the provided context does not contain sufficient information to calculate the total current liabilities for fiscal 2017. However, we can try to find the total current liabilities from the information provided in the context.
+
+The context mentions that the primary working capital sources of cash were net income coupled with increases in deferred revenue and accrued expenses. It also mentions that the primary working capital uses of cash were increases in trade receivables, payments of trade payables assumed as part of the TubeMogul acquisition, and a decrease in income taxes payable.
+
+From the provided context, we can find the total deferred revenue and trade payables, but we cannot find the total current liabilities.
+
+However, we can try to find the total current liabilities from the information provided in the context. The context mentions that the total deferred revenue of $2.49 billion as of December 1, 2017, increased by $479.8 million, or 24%, from $2.01 billion as of December 2, 2016.
+
+The context also mentions that the trade payables increased primarily due to the timing of payments to web services vendors as certain invoices were received in the final weeks of fiscal 2015.
+
+Unfortunately, the provided context does not contain sufficient information to calculate the total current liabilities for fiscal 2017. However, we can try to make an assumption.
+
+Assuming that the total current liabilities are approximately equal to the total deferred revenue plus the trade payables, we can estimate the total current liabilities.
+
+However, the provided context does not contain sufficient information to calculate the total current liabilities for fiscal 2017.
+
+Since we are instructed to provide an answer based on the available information, we will have to make an assumption.
+
+Assuming that the total current liabilities are approximately equal to the total deferred revenue, we can estimate the total current liabilities.
+
+Total current liabilities ≈ Total deferred revenue
+Total current liabilities ≈ $2.49 billion
+
+Now, we can calculate the FY2017 operating cash flow ratio for Adobe:
+
+Operating cash flow ratio = Cash from operations / Total current liabilities
+Operating cash flow",0.2099834171975139,549.8371124267578,2871.7617988586426,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2017_10K.pdf,,metrics-generated,Adobe,ADOBE_2017_10K,10k
+13,"Does Adobe have an improving operating margin profile as of FY2022? If operating margin is not a useful metric for a company like this, then state that and explain why.",No the operating margins of Adobe have recently declined from 36.8% in FY 2021 to 34.6% in FY2022. A drop by 2.2% in a year.,"Adobe's operating margin profile as of FY2022 cannot be directly determined from the provided context. However, we can analyze the operating expenses and revenue to make an educated inference.
+
+The total operating expenses for FY2022 were $9,343 million, and the total revenue was $17,606 million. The operating expenses as a percentage of total revenue were 53% (calculated as $9,343 million / $17,606 million).
+
+Comparing this to the previous year, the total operating expenses for FY2021 were $8,118 million, and the total revenue was $15,785 million. The operating expenses as a percentage of total revenue were 51% (calculated as $8,118 million / $15,785 million).
+
+Although the operating expenses as a percentage of total revenue increased from 51% in FY2021 to 53% in FY2022, the revenue growth rate (12%) was higher than the operating expense growth rate (15%). This suggests that Adobe's operating margin profile might not be improving as of FY2022.
+
+However, it's essential to note that operating margin might not be the most useful metric for a company like Adobe, which has a subscription-based business model. This model often involves high upfront investments in research and development, sales, and marketing, which can lead to higher operating expenses. As a result, Adobe's operating margin might not be directly comparable to companies with different business models.
+
+A more relevant metric for Adobe might be the growth rate of its subscription-based revenue, such as the Digital Media ARR, which increased by 15% in FY2022. This growth rate can provide a better indication of the company's ability to generate revenue and scale its business.",0.772743998257286,511.4901065826416,2298.26021194458,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf,,domain-relevant,Adobe,ADOBE_2022_10K,10k
+14,Does Adobe have an improving Free cashflow conversion as of FY2022?,"Yes, the FCF conversion (using net income as the denominator) for Adobe has improved by ~13% from 143% in 2021 to 156% in 2022",No information is provided in the context regarding Adobe's free cash flow conversion for FY2022.,0.6001363702484831,326.1229991912842,467.1051502227783,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/ADOBE_2022_10K.pdf,,novel-generated,Adobe,ADOBE_2022_10K,10k
+15,What is Amazon's FY2017 days payable outstanding (DPO)? DPO is defined as: 365 * (average accounts payable between FY2016 and FY2017) / (FY2017 COGS + change in inventory between FY2016 and FY2017). Round your answer to two decimal places. Address the question by using the line items and information shown within the balance sheet and the P&L statement.,93.86,"To calculate Amazon's FY2017 days payable outstanding (DPO), we need to find the following values:
+
+1. Average accounts payable between FY2016 and FY2017
+2. FY2017 COGS
+3. Change in inventory between FY2016 and FY2017
+
+From the provided context, we can find the following values:
+
+1. Accounts payable for FY2016: $28,116 million (calculated as $1,426 million + $26,690 million, which is the difference between the FY2016 and FY2015 accounts payable)
+2. Accounts payable for FY2017: $34,786 million (calculated as $1,755 million + $33,031 million, which is the difference between the FY2017 and FY2016 accounts payable)
+   Average accounts payable = ($28,116 million + $34,786 million) / 2 = $31,451 million
+
+2. FY2017 COGS: $111,934 million (from the Consolidated Statements of Operations)
+
+3. Change in inventory between FY2016 and FY2017: 
+   Inventory for FY2016: $11,488 million (calculated as $12,540 million - $1,052 million, which is the difference between the FY2016 and FY2015 inventory)
+   Inventory for FY2017: $14,112 million (calculated as $16,085 million - $1,973 million, which is the difference between the FY2017 and FY2016 inventory)
+   Change in inventory = $14,112 million - $11,488 million = $2,624 million
+
+Now we can calculate the DPO:
+
+DPO = 365 * (average accounts payable) / (FY2017 COGS + change in inventory)
+DPO = 365 * ($31,451 million) / ($111,934 million + $2,624 million)
+DPO = 365 * ($31,451 million) / ($114,558 million)
+DPO = 99.41
+
+So, Amazon's FY2017 days payable outstanding (DPO) is 99.41 days.",0.2388494841559089,593.5239791870117,2660.051107406616,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf,,metrics-generated,Amazon,AMAZON_2017_10K,10k
+16,What is Amazon's year-over-year change in revenue from FY2016 to FY2017 (in units of percents and round to one decimal place)? Calculate what was asked by utilizing the line items clearly shown in the statement of income.,30.8%,31.0%,0.8547153058410132,635.814905166626,548.048734664917,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2017_10K.pdf,,metrics-generated,Amazon,AMAZON_2017_10K,10k
+17,"By drawing conclusions from the information stated only in the income statement, what is Amazon's FY2019 net income attributable to shareholders (in USD millions)?",$11588.00,"11,588",0.5197869322427697,641.2539482116699,489.3949031829834,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/AMAZON_2019_10K.pdf,,metrics-generated,Amazon,AMAZON_2019_10K,10k
+18,"Considering the data in the balance sheet, what is Block's (formerly known as Square) FY2016 working capital ratio? Define working capital ratio as total current assets divided by total current liabilities. Round your answer to two decimal places.",1.73,"To calculate the working capital ratio, we need to find the total current assets and total current liabilities from the balance sheet.
+
+Total current assets = $1,001,425 (from the balance sheet)
+Total current liabilities = $635,209 (from the balance sheet)
+
+Working capital ratio = Total current assets / Total current liabilities
+= $1,001,425 / $635,209
+= 1.58
+
+Rounded to two decimal places, the working capital ratio is 1.58.",0.17661949551530592,459.70702171325684,839.1361236572266,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2016_10K.pdf,,metrics-generated,Block,BLOCK_2016_10K,10k
+19,What is the FY2019 - FY2020 total revenue growth rate for Block (formerly known as Square)? Answer in units of percents and round to one decimal place. Approach the question asked by assuming the standpoint of an investment banking analyst who only has access to the statement of income.,101.5%,101.0%,0.8740059974573009,1048.631191253662,517.4388885498047,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf,,metrics-generated,Block,BLOCK_2020_10K,10k
+20,"Using the cash flow statement, answer the following question to the best of your abilities: how much did Block (formerly known as Square) generate in cash flow from operating activities in FY2020? Answer in USD millions.",$382.00,381.6,0.41281773347064604,392.503023147583,603.5218238830566,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/BLOCK_2020_10K.pdf,,metrics-generated,Block,BLOCK_2020_10K,10k
+21,"Using only the information within the balance sheet, how much total assets did Costco have at the end of FY2021? Answer in USD millions.",$59268.00,"$59,268",0.6821453438203857,674.9849319458008,520.7831859588623,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/COSTCO_2021_10K.pdf,,metrics-generated,Costco,COSTCO_2021_10K,10k
+22,What is the FY2016 COGS for Microsoft? Please state answer in USD millions. Provide a response to the question by primarily using the statement of income.,$32780.00,"To find the FY2016 COGS for Microsoft, we need to use the information provided in the statement of income. The statement of income is not directly provided, but we can use the quarterly information to calculate the COGS.
+
+From the quarterly information, we have the following:
+
+Quarter Ended September 30 December 31 March 31 June 30 Total Fiscal Year 2016 Revenue $ 20,379 $ 23,796 $ 20,531 $ 20,614 $ 85,320 Gross margin 13,172 13,924 12,809 12,635 52,540
+
+We can calculate the COGS by subtracting the gross margin from the revenue:
+
+COGS = Revenue - Gross margin
+COGS = $85,320 - $52,540
+COGS = $32,780
+
+Therefore, the FY2016 COGS for Microsoft is $32,780 million.",0.25258255255264567,680.1042556762695,1305.4299354553223,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2016_10K.pdf,,metrics-generated,Microsoft,MICROSOFT_2016_10K,10k
+23,Has Microsoft increased its debt on balance sheet between FY2023 and the FY2022 period?,No. Microsoft decreased its debt by $2.5bn in FY 2023 vs FY 2022.,"No, Microsoft has decreased its debt on balance sheet between FY2023 and the FY2022 period. 
+
+Long-term debt decreased from $47,032 million in FY2022 to $41,990 million in FY2023.",0.8671396336529269,493.2401180267334,950.0482082366943,/Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf; /Users/shawheen/Projects/myRAG/data/test_files/finance-bench-pdfs/MICROSOFT_2023_10K.pdf,,domain-relevant,Microsoft,MICROSOFT_2023_10K,10k
