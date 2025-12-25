@@ -43,8 +43,8 @@ echo "OPENAI_API_KEY=your_key" >> .env
 # Download from: https://github.com/patronus-ai/financebench/tree/main/pdfs
 
 # 4. Build vector database (with metadata)
-python src/create_database_v2.py --sample 5  # Test on 5 PDFs first
-python src/create_database_v2.py             # Full ingestion (2-4 hours)
+python src/ingest.py --sample 5  # Test on 5 PDFs first
+python src/ingest.py             # Full ingestion (2-4 hours)
 
 # 5. Run evaluation
 python src/bulk_testing.py --pipeline hybrid_filter_rerank --top-k 10
@@ -120,27 +120,27 @@ python src/bulk_testing.py --pipeline hybrid_filter_rerank --top-k 10
 rag/
 ├── src/
 │   ├── config.py                    # Central configuration
-│   ├── providers/                   # LLM provider adapters
-│   │   ├── base.py                  # Abstract LLMProvider class
-│   │   ├── factory.py               # get_provider(model_name)
-│   │   ├── openai_provider.py       # GPT models
-│   │   ├── anthropic_provider.py    # Claude models
-│   │   └── google_provider.py       # Gemini models
-│   ├── retrieval_tools/             # Retrieval pipelines
-│   │   ├── tool_registry.py         # Pipeline builder
-│   │   ├── semantic.py              # Vector similarity
-│   │   ├── hybrid.py                # BM25 + Semantic
-│   │   ├── metadata_filter.py       # Company/year filtering
-│   │   └── rerank.py                # Cross-encoder reranking
+│   ├── ingest.py                    # Main ingestion script (PDF -> ChromaDB)
 │   ├── metadata_utils.py            # Filename/question metadata extraction
-│   ├── create_database_v2.py        # Improved ingestion with metadata
 │   ├── bulk_testing.py              # Evaluation framework
-│   └── meta_learning/               # Meta-learning components (WIP)
-├── evaluation/                      # Metrics (semantic similarity, LLM judge)
-├── dataset_adapters/                # Dataset loaders (FinanceBench, PubMedQA)
-├── data/test_files/finance-bench-pdfs/  # 367 PDFs (636 MB)
-├── chroma/                          # Vector database
-└── bulk_runs/                       # Evaluation results
+│   ├── providers/                   # LLM provider adapters
+│   │   ├── base.py
+│   │   ├── factory.py
+│   │   ├── openai_provider.py
+│   │   ├── anthropic_provider.py
+│   │   ├── google_provider.py
+│   │   ├── deepseek_provider.py
+│   │   └── together_provider.py
+│   └── retrieval_tools/             # Retrieval pipelines
+│       ├── tool_registry.py         # Pipeline builder
+│       ├── semantic.py              # Vector similarity
+│       ├── hybrid.py                # BM25 + Semantic
+│       ├── hybrid_filter.py         # + Metadata filtering
+│       └── rerank.py                # Cross-encoder reranking
+├── data/
+│   └── test_files/finance-bench-pdfs/  # Source PDFs
+├── requirements.txt
+└── README.md
 ```
 
 ## Benchmark Results
@@ -166,17 +166,14 @@ rag/
 ## Commands
 
 ```bash
-# Database creation
-python src/create_database_v2.py              # Full ingestion with metadata
-python src/create_database_v2.py --sample 5   # Test on 5 PDFs
+# Database creation (Resumable)
+python src/ingest.py --sample 5               # Test on 5 PDFs first
+python src/ingest.py --batch-size 10          # Full ingestion (saves every 10 files)
 
 # Evaluation
 python src/bulk_testing.py --model claude-sonnet-4-5 --top-k 10 --pipeline hybrid_filter_rerank
 python src/bulk_testing.py --model gemini-3-flash --top-k 10   # Cheaper option
 python src/bulk_testing.py --subset data/question_sets/financebench_subset_questions.csv
-
-# Pipeline tests
-python tests/test_pipelines.py  # Iterate over all pipeline configs
 ```
 
 ## Supported Models
@@ -245,7 +242,7 @@ See `ROADMAP.md` for detailed implementation plan.
 
 | Problem | Solution |
 |---------|----------|
-| Database not found | Run `python src/create_database_v2.py` first |
+| Database not found | Run `python src/ingest.py` first |
 | Module not found | Run from project root: `cd /path/to/rag` |
 | Rate limit errors | Partial results saved automatically; check API quota |
 | Low similarity scores | Increase top-k, verify PDFs match dataset, check CSV sources |

@@ -211,7 +211,7 @@ python src/bulk_testing.py --model gemini-3-flash
 python src/bulk_testing.py --model deepseek-chat
 
 # Rebuild database
-python src/create_database_element_based.py
+python src/ingest.py
 ```
 
 ---
@@ -223,8 +223,7 @@ rag/
 ├── src/
 │   ├── config.py                 # Centralized configuration
 │   ├── bulk_testing.py           # Main evaluation runner
-│   ├── create_database.py        # Basic chunking
-│   ├── create_database_element_based.py  # Table-aware chunking
+│   ├── ingest.py                 # Improved ingestion with metadata
 │   ├── metadata_utils.py         # Company/year extraction
 │   ├── providers/                # LLM provider abstractions
 │   │   ├── base.py
@@ -232,18 +231,12 @@ rag/
 │   │   ├── openai_provider.py
 │   │   ├── anthropic_provider.py
 │   │   └── google_provider.py
-│   ├── retrieval_tools/          # Retrieval pipelines
-│   │   ├── tool_registry.py
-│   │   ├── semantic.py
-│   │   ├── hybrid.py
-│   │   ├── metadata_filter.py
-│   │   └── rerank.py
-│   └── meta_learning/            # Meta-learning (stubs)
-│       ├── router.py
-│       ├── oracle_labels.py
-│       ├── episodes.py
-│       ├── meta_trainer.py
-│       └── evaluator.py
+│   └── retrieval_tools/          # Retrieval pipelines
+│       ├── tool_registry.py
+│       ├── semantic.py
+│       ├── hybrid.py
+│       ├── metadata_filter.py
+│       └── rerank.py
 ├── evaluation/                   # Metrics
 ├── dataset_adapters/             # Dataset loaders
 ├── bulk_runs/                    # Results

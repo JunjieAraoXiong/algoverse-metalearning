@@ -152,6 +152,12 @@ PROVIDERS: Dict[str, ProviderConfig] = {
         api_key_env="DEEPSEEK_API_KEY",
         models=["deepseek-chat", "deepseek-reasoner"],
     ),
+    "local-vllm": ProviderConfig(
+        name="local-vllm",
+        base_url="http://localhost:8000/v1",
+        api_key_env="EMPTY_KEY",  # vLLM doesn't need a real key, but provider might check existence
+        models=["meta-llama/Meta-Llama-3.1-70B-Instruct"],
+    ),
 }
 
 
@@ -166,6 +172,8 @@ def get_provider_for_model(model_name: str) -> str:
         return "google"
     elif "deepseek" in model_lower and not model_lower.startswith("deepseek-ai/"):
         return "deepseek"
+    elif "meta-llama" in model_lower:
+        return "local-vllm"
     return "together"
 
 

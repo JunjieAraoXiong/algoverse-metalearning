@@ -35,3 +35,17 @@ These notes summarize the architectural and operational lessons learned while bu
     *   **Fix:** Export environment variables (`NLTK_DATA`, `HF_HOME`) to a writable `/data/` path.
 *   **System Tools:** Tools like `poppler-utils` (for PDF reading) are often missing on clean GPU nodes.
     *   **Fix:** `sudo apt-get install` must be run on the GPU node, not the login node.
+
+## Module 6: Industry Intelligence (Gestell.ai Benchmark)
+**The Benchmark:** FinanceBench (50k+ pages, 10k questions).
+*   **Traditional RAG:** ~30-35% accuracy.
+*   **Fine-tuned Embeddings (Databricks):** ~65% accuracy.
+*   **Gestell.ai:** ~88% accuracy.
+
+**Key Differentiators (Actionable):**
+1.  **Natural Language Structuring:** Instead of heuristics (`chunk_by_title`), they use LLMs to "structure" PDFs based on natural language instructions (e.g., "Extract fiscal year as metadata"). *We are doing this via regex in `src/ingest.py` (v2), but LLM-based is more robust.*
+2.  **Specialized Knowledge Graphs:** "Naive Graphs + Naive Vectors = Worst Results." They use highly specialized graphs based on use-case (e.g., Company relationships, Financial statement links).
+3.  **Chain of Thought (CoT):** Used at *both* ingestion (to structure data) and retrieval (to reason about where to look).
+4.  **Re-ranking:** Essential for "squeezing the last few %" at scale. *We have this in `hybrid_filter_rerank`.*
+
+**Takeaway:** Our `ingest.py` (Metadata extraction) and `hybrid_filter_rerank` (Re-ranking) are on the right track. The next leap is **LLM-driven Structuring** (asking models to extract data) and **Specialized KGs** (connecting concepts).

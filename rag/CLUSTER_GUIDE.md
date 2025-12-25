@@ -31,12 +31,23 @@ mkdir -p $NLTK_DATA $MPLCONFIGDIR $HF_HOME
 ```
 
 ## 5. Run Ingestion (If needed)
-Build the vector database (Parallel & GPU accelerated):
+Build the vector database (Resumable - auto-saves progress):
 ```bash
-python src/create_database_v2.py
+python src/ingest.py --batch-size 10
 ```
 
-## 6. Run Evaluation
+## 6. Run Local vLLM (Optional, for Free Inference)
+To use the 8x H100s for inference instead of paying for APIs:
+1.  Start the vLLM server in a new tmux session:
+    ```bash
+    bash scripts/launch_vllm.sh
+    ```
+2.  Detach (`Ctrl+B, D`) and run evaluation in your main session:
+    ```bash
+    python src/bulk_testing.py --model meta-llama/Meta-Llama-3.1-70B-Instruct
+    ```
+
+## 7. Run Evaluation
 Test the RAG pipeline on FinanceBench:
 ```bash
 python src/bulk_testing.py --pipeline hybrid_filter_rerank --top-k 10
@@ -45,6 +56,6 @@ python src/bulk_testing.py --pipeline hybrid_filter_rerank --top-k 10
 ---
 
 ## Troubleshooting Tips
-* **OOM Error:** If ingestion crashes with "abruptly terminated", ensure `max_workers` in `create_database_v2.py` is capped (e.g., `min(16, ...)`).
+* **OOM Error:** If ingestion crashes with "abruptly terminated", ensure `max_workers` in `ingest.py` is capped (e.g., `min(16, ...)`).
 * **Missing API Key:** Check `.env` file exists in the `rag/` directory.
 * **GPU Not Found:** Run `nvidia-smi` to verify 8 GPUs are visible.

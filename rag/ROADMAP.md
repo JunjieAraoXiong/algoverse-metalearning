@@ -508,9 +508,9 @@ Transform raw PDFs into a searchable vector database with rich metadata, enablin
 |------|------------|---------------|----------------|
 | Design metadata schema | ~30 min | Defined `DocumentMetadata` dataclass with company, year, doc_type, quarter, fiscal_period | `src/metadata_utils.py` |
 | Implement filename parser | ~20 min | `parse_filename()` extracts metadata from `COMPANY_YEAR_DOCTYPE.pdf` pattern | `src/metadata_utils.py` |
-| Create v2 ingestion script | ~1 hr | Full pipeline: parse filename → Unstructured hi_res → chunk_by_title → enrich metadata → embed → store | `src/create_database_v2.py` |
-| Add table→markdown conversion | ~20 min | `html_table_to_markdown()` converts Unstructured's HTML tables to markdown | `src/create_database_v2.py` |
-| Add element type tagging | ~10 min | `get_element_type()` maps Unstructured elements to table/prose/title/etc | `src/create_database_v2.py` |
+| Create v2 ingestion script | ~1 hr | Full pipeline: parse filename → Unstructured hi_res → chunk_by_title → enrich metadata → embed → store | `src/ingest.py` |
+| Add table→markdown conversion | ~20 min | `html_table_to_markdown()` converts Unstructured's HTML tables to markdown | `src/ingest.py` |
+| Add element type tagging | ~10 min | `get_element_type()` maps Unstructured elements to table/prose/title/etc | `src/ingest.py` |
 | Install OCR dependencies | ~10 min | `brew install poppler tesseract` for hi_res PDF parsing | System |
 | Test on sample PDF | ~15 min | Verified 486 chunks from 3M_2016_10K.pdf with correct metadata | Tested |
 
@@ -518,7 +518,7 @@ Transform raw PDFs into a searchable vector database with rich metadata, enablin
 
 | Task | Estimated Time | What To Do | Command/Notes |
 |------|----------------|------------|---------------|
-| Run full ingestion | 2-4 hrs (mostly waiting) | Process all 367 PDFs through v2 pipeline | `python src/create_database_v2.py` |
+| Run full ingestion | 2-4 hrs (mostly waiting) | Process all 367 PDFs through v2 pipeline | `python src/ingest.py` |
 | Verify metadata coverage | ~15 min | Check all chunks have company/year metadata | Query ChromaDB, spot check |
 | (Optional) Tune table detection | ~1 hr | Currently 0 tables detected; may need to adjust Unstructured params | Investigate `infer_table_structure` |
 
@@ -537,7 +537,7 @@ Metadata: {
 ### Key Files
 | File | Purpose |
 |------|---------|
-| `src/create_database_v2.py` | Main ingestion script (run this) |
+| `src/ingest.py` | Main ingestion script (run this) |
 | `src/metadata_utils.py` | Filename parsing + question metadata extraction |
 | `src/create_database.py` | Old basic ingestion (deprecated) |
 | `src/create_database_element_based.py` | Previous attempt (superseded by v2) |
@@ -545,10 +545,10 @@ Metadata: {
 ### How To Run
 ```bash
 # Test on small sample first
-python src/create_database_v2.py --sample 5
+python src/ingest.py --sample 5
 
 # Full ingestion (will take 2-4 hours)
-python src/create_database_v2.py
+python src/ingest.py
 
 # Check output
 ls -la chroma/  # Should see new database files
@@ -1146,7 +1146,7 @@ chroma_cuad/               # Vector store for legal domain
 │                                                                             │
 │  ═══════════════════════════════════════════════════════════════════════   │
 │  NEXT ACTION: Run full ingestion                                           │
-│  COMMAND: python src/create_database_v2.py                                 │
+│  COMMAND: python src/ingest.py                                             │
 │  ═══════════════════════════════════════════════════════════════════════   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1158,10 +1158,10 @@ chroma_cuad/               # Vector store for legal domain
 ### Commands
 ```bash
 # Test improved ingestion
-python src/create_database_v2.py --sample 5
+python src/ingest.py --sample 5
 
 # Full ingestion
-python src/create_database_v2.py
+python src/ingest.py
 
 # Run evaluation
 python src/bulk_testing.py --model claude-sonnet-4-5 --top-k 10
@@ -1182,10 +1182,9 @@ python src/bulk_testing.py --subset data/question_sets/financebench_subset_quest
 | File | Purpose |
 |------|---------|
 | `src/config.py` | Centralized configuration |
-| `src/create_database_v2.py` | Improved ingestion |
+| `src/ingest.py` | Improved ingestion |
 | `src/bulk_testing.py` | Evaluation runner |
 | `src/retrieval_tools/` | Retrieval pipelines |
-| `src/meta_learning/` | Meta-learning (stubs) |
 
 ---
 
@@ -1230,3 +1229,10 @@ python src/bulk_testing.py --subset data/question_sets/financebench_subset_quest
 - [Ragie FinanceBench Results](https://www.ragie.ai/blog/ragie-outperformed-financebench)
 - [Databricks Long Context RAG](https://www.databricks.com/blog/long-context-rag-performance-llms)
 - [Patronus AI FinanceBench Docs](https://docs.patronus.ai/docs/research_and_differentiators/financebench)
+## Long Term Goals (Inspired by Industry SOTA)
+
+| Goal | Description | Why? |
+|------|-------------|------|
+| **LLM-Driven Indexing** | Use vLLM during ingestion to "read" each chunk and extract structured JSON (revenue, dates, entities) instead of regex. | Regex fails on weird formats. LLMs understand semantic structure. |
+| **Specialized Knowledge Graph** | Build a "Financial Statement Graph" linking Line Items -> Tables -> Footnotes. | "Naive graphs fail." Explicit links (e.g., Revenue -> Note 3) beat vector similarity. |
+| **Agentic Retrieval** | Use a "Search Agent" that plans a multi-step research strategy (CoT) before querying. | Hard questions (Novel-Generated) need planning, not just lookup. |
