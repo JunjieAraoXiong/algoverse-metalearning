@@ -117,6 +117,7 @@ def process_pdf(pdf_path: Path) -> List[Document]:
         filename=str(pdf_path),
         strategy="hi_res",  # High resolution for better table detection
         infer_table_structure=True,  # Extract tables as structured data
+        ocr_languages="eng",  # Explicitly set language to silence warnings
         extract_images_in_pdf=False,
         include_page_breaks=True,
         max_characters=4000,
