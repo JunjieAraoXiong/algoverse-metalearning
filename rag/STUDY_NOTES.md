@@ -37,6 +37,8 @@ These notes summarize the architectural and operational lessons learned while bu
     *   **Fix:** `sudo apt-get install` must be run on the GPU node, not the login node.
 *   **ChromaDB Max Batch Size:** Chroma crashes if you try to `add` more than ~5461 documents at once.
     *   **Fix:** When using `--fast` mode (which generates 20k+ chunks per batch), you *must* slice the list into sub-batches of 5000 before adding to DB.
+*   **Lost Environment Variables:** `export` commands only last for the current session. If you log out or open a new terminal, `NLTK_DATA` resets to default (read-only), causing `Permission denied`.
+    *   **Fix:** Always run `source venv/bin/activate` AND re-run the `export` commands in every new terminal.
 ## Module 6: Industry Intelligence (Gestell.ai Benchmark)
 **The Benchmark:** FinanceBench (50k+ pages, 10k questions).
 *   **Traditional RAG:** ~30-35% accuracy.
