@@ -303,8 +303,13 @@ def run_ingestion(
         if batch_chunks:
             print(f"  -> Saving {len(batch_chunks)} chunks to ChromaDB...", end=" ", flush=True)
             try:
-                db.add_documents(batch_chunks)
-                print("Done.")
+                # ChromaDB has a max batch size (usually 5461). We use 5000 to be safe.
+                CHROMA_MAX_BATCH = 5000
+                for k in range(0, len(batch_chunks), CHROMA_MAX_BATCH):
+                    sub_batch = batch_chunks[k:k + CHROMA_MAX_BATCH]
+                    db.add_documents(sub_batch)
+                    print(f".", end="", flush=True)
+                print(" Done.")
             except Exception as e:
                 print(f"ERROR Saving Log: {e}")
         
