@@ -35,7 +35,8 @@ These notes summarize the architectural and operational lessons learned while bu
     *   **Fix:** Export environment variables (`NLTK_DATA`, `HF_HOME`) to a writable `/data/` path.
 *   **System Tools:** Tools like `poppler-utils` (for PDF reading) are often missing on clean GPU nodes.
     *   **Fix:** `sudo apt-get install` must be run on the GPU node, not the login node.
-
+*   **ChromaDB Max Batch Size:** Chroma crashes if you try to `add` more than ~5461 documents at once.
+    *   **Fix:** When using `--fast` mode (which generates 20k+ chunks per batch), you *must* slice the list into sub-batches of 5000 before adding to DB.
 ## Module 6: Industry Intelligence (Gestell.ai Benchmark)
 **The Benchmark:** FinanceBench (50k+ pages, 10k questions).
 *   **Traditional RAG:** ~30-35% accuracy.
