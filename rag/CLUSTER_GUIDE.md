@@ -3,10 +3,11 @@
 Follow these steps every time you start a new session to ensure the environment is ready for Finance RAG experiments.
 
 ## 1. Request GPU Allocation
-Run this on the login node to get your 8x H100s:
+Run this on the login node to get your 8x H100s (Big Node):
 ```bash
-srun --gpus=8 --cpus-per-task=32 --mem=200G --time=04:00:00 --pty bash
+srun --gpus=8 --cpus-per-task=64 --mem=400G --time=08:00:00 --pty bash
 ```
+*If this fails (node unavailable), fall back to: `--cpus-per-task=32 --mem=200G`*
 
 ## 2. Re-install System Dependencies
 *These are wiped from the system path when the node resets.*
