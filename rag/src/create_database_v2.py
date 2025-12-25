@@ -102,25 +102,23 @@ def get_element_type(element) -> str:
 def process_pdf(pdf_path: Path) -> List[Document]:
     """
     Process a single PDF with improved parsing.
-
-    Returns list of Document objects with rich metadata.
     """
     chunks = []
 
     # Parse filename for metadata
     file_meta = parse_filename(pdf_path.name)
     if not file_meta:
-        print(f"  Warning: Could not parse filename {pdf_path.name}")
         file_meta_dict = {"source_file": pdf_path.name}
     else:
         file_meta_dict = file_meta.to_dict()
 
     # Parse PDF into elements
+    # Using hi_res for final build, user can change to fast via sed
     elements = partition_pdf(
         filename=str(pdf_path),
-        strategy="hi_res",  # High resolution for better table detection
-        infer_table_structure=True,  # Extract tables as structured data
-        ocr_languages="eng",  # Explicitly set language to silence warnings
+        strategy="hi_res",
+        infer_table_structure=True,
+        ocr_languages="eng",
         extract_images_in_pdf=False,
         include_page_breaks=True,
         max_characters=4000,
@@ -128,7 +126,7 @@ def process_pdf(pdf_path: Path) -> List[Document]:
         combine_text_under_n_chars=500,
     )
 
-    # Chunk by title sections, keeping tables intact
+    # Chunk by title sections
     chunked_elements = chunk_by_title(
         elements,
         max_characters=2000,
@@ -137,33 +135,22 @@ def process_pdf(pdf_path: Path) -> List[Document]:
     )
 
     for chunk in chunked_elements:
-        # Get element metadata
         elem_meta = chunk.metadata.to_dict() if hasattr(chunk.metadata, 'to_dict') else {}
-
-        # Determine element type
         element_type = get_element_type(chunk)
-
-        # Get text content
         text = chunk.text
 
-        # Convert tables to markdown if we have HTML
         if element_type == 'table':
             html = elem_meta.get('text_as_html', '')
             if html:
                 text = html_table_to_markdown(html)
 
-        # Build comprehensive metadata
         metadata = {
-            # From filename
             **file_meta_dict,
-            # Element info
             'element_type': element_type,
             'page_number': elem_meta.get('page_number', 0),
-            # Source path for reference
             'source': str(pdf_path),
         }
 
-        # Clean metadata values (ChromaDB only accepts str, int, float, bool, None)
         cleaned_metadata = {}
         for key, value in metadata.items():
             if isinstance(value, list):
@@ -173,31 +160,20 @@ def process_pdf(pdf_path: Path) -> List[Document]:
             else:
                 cleaned_metadata[key] = str(value)
 
-        # Skip empty chunks
         if not text or not text.strip():
             continue
 
-        chunks.append(Document(
-            page_content=text,
-            metadata=cleaned_metadata
-        ))
+        chunks.append(Document(page_content=text, metadata=cleaned_metadata))
 
     return chunks
 
 
 def save_to_chroma(chunks: List[Document], chroma_path: str):
     """Save chunks to ChromaDB with batched embedding."""
-    import shutil
-
-    # Clear existing database
-    if os.path.exists(chroma_path):
-        print(f"Removing existing database at {chroma_path}")
-        shutil.rmtree(chroma_path)
-
     # Get embedding model
     embeddings = get_embedding_model(DEFAULTS.embedding_model)
 
-    # Process in batches (increased for H100s)
+    # Process in batches
     batch_size = 5000
     total_batches = (len(chunks) + batch_size - 1) // batch_size
 
@@ -223,7 +199,7 @@ def save_to_chroma(chunks: List[Document], chroma_path: str):
     print(f"\n{'='*80}")
     print(f"✓ Database created at {chroma_path}")
     print(f"✓ Total chunks: {len(chunks)}")
-    print(f"{'='*80}\n")
+    print(f"{ '='*80}\n")
 
 
 def load_and_process_pdfs_parallel(data_path: str, sample: Optional[int] = None) -> List[Document]:
@@ -234,104 +210,57 @@ def load_and_process_pdfs_parallel(data_path: str, sample: Optional[int] = None)
     import multiprocessing
 
     pdf_files = sorted(Path(data_path).glob("*.pdf"))
-
     if sample:
         pdf_files = pdf_files[:sample]
 
     total_files = len(pdf_files)
     all_chunks = []
     failed_files = []
-
-    # Stats
     table_count = 0
     prose_count = 0
     
-    # Determine optimal workers
-    # Hardcoded to 16 to prevent OOM on 200GB nodes (16 workers * ~4GB/worker = 64GB)
+    # Safely set workers
     max_workers = 16
 
     print(f"\n{'='*80}")
-    print("IMPROVED INGESTION V2 (PARALLEL)")
-    print(f"Features: Filename metadata, Table preservation, Element tagging")
+    print("INGESTION START")
     print(f"Parallelism: {max_workers} workers")
-    print(f"{'='*80}\n")
-    print(f"Processing {total_files} PDF files...")
-    print()
+    print(f"{ '='*80}\n")
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all tasks
         future_to_file = {executor.submit(process_pdf, pdf_path): pdf_path for pdf_path in pdf_files}
-        
         completed_count = 0
         for future in as_completed(future_to_file):
             pdf_path = future_to_file[future]
             completed_count += 1
-            
             try:
                 chunks = future.result()
-                
-                # Update stats
-                file_tables = 0
-                file_prose = 0
                 for c in chunks:
                     if c.metadata.get('element_type') == 'table':
-                        file_tables += 1
+                        table_count += 1
                     else:
-                        file_prose += 1
-                
-                table_count += file_tables
-                prose_count += file_prose
-                
+                        prose_count += 1
                 all_chunks.extend(chunks)
                 print(f"[{completed_count}/{total_files}] {pdf_path.name}... ✓ {len(chunks)} chunks")
-                
             except Exception as e:
                 print(f"[{completed_count}/{total_files}] {pdf_path.name}... ✗ FAILED: {str(e)[:60]}")
                 failed_files.append({'file': pdf_path.name, 'error': str(e)})
 
-    # Summary
-    print(f"\n{'='*80}")
-    print("PROCESSING COMPLETE")
-    print(f"{'='*80}")
-    print(f"Files processed: {total_files - len(failed_files)}/{total_files}")
-    print(f"Total chunks: {len(all_chunks)}")
-    print(f"  - Tables: {table_count}")
-    print(f"  - Prose/Other: {prose_count}")
-
-    if failed_files:
-        print(f"\nFailed files ({len(failed_files)}):")
-        for f in failed_files[:10]:
-            print(f"  - {f['file']}")
-
-    if all_chunks:
-        print(f"\n{'='*80}")
-        print("SAMPLE CHUNK")
-        print(f"{'='*80}")
-        sample_chunk = all_chunks[0]
-        print(f"Metadata: {sample_chunk.metadata}")
-        print(f"Content preview: {sample_chunk.page_content[:300]}...")
-
-    print()
     return all_chunks
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Improved PDF ingestion for FinanceBench")
-    parser.add_argument("--sample", type=int, help="Only process N PDFs (for testing)")
-    parser.add_argument("--output-dir", type=str, default=DEFAULT_CHROMA_PATH,
-                        help="ChromaDB output directory")
-    parser.add_argument("--data-dir", type=str, default=DATA_PATH,
-                        help="Directory containing PDFs")
+    parser = argparse.ArgumentParser(description="Finance RAG Ingestion")
+    parser.add_argument("--sample", type=int, help="Only process N PDFs")
+    parser.add_argument("--output-dir", type=str, default=DEFAULT_CHROMA_PATH)
+    parser.add_argument("--data-dir", type=str, default=DATA_PATH)
     args = parser.parse_args()
 
-    # Load and process PDFs (Parallel)
     chunks = load_and_process_pdfs_parallel(args.data_dir, sample=args.sample)
-
     if not chunks:
-        print("No chunks created. Exiting.")
+        print("No chunks created.")
         return
 
-    # Save to ChromaDB
     save_to_chroma(chunks, args.output_dir)
 
 
