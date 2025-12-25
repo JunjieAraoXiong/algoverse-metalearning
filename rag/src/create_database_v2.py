@@ -230,9 +230,9 @@ def load_and_process_pdfs_parallel(data_path: str, sample: Optional[int] = None)
     table_count = 0
     prose_count = 0
     
-    # Determine optimal workers (leave some CPUs for system)
-    # Capped at 16 to prevent OOM on 200GB nodes (16 workers * ~4GB/worker = 64GB)
-    max_workers = min(16, max(1, multiprocessing.cpu_count() - 2))
+    # Determine optimal workers
+    # Hardcoded to 16 to prevent OOM on 200GB nodes (16 workers * ~4GB/worker = 64GB)
+    max_workers = 16
 
     print(f"\n{'='*80}")
     print("IMPROVED INGESTION V2 (PARALLEL)")
