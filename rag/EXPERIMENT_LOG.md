@@ -20,18 +20,15 @@ Ingest 367 FinanceBench PDFs (10-Ks, 10-Qs) into a ChromaDB vector store with ri
     *   Node limit: 200GB.
 *   **Lesson:** CPU count is not the limit for heavy AI tasks; RAM is.
 
-### Attempt 3: Optimized Parallelism (Current Strategy)
-*   **Method:** Capped `max_workers` at **16**.
-*   **Hardware Mapping:**
-    *   **CPU:** 16 cores used for parsing/OCR.
-    *   **RAM:** ~60-80GB usage (safe headroom).
-    *   **GPU:** H100s used for Embedding generation (`bge-large`) in massive batches (5,000 chunks).
-*   **Status:** Stable. Estimated runtime ~15-20 minutes.
+### Attempt 4: Local SSD Optimization (The /tmp Strategy)
+*   **Discovery:** Reading 368 PDFs simultaneously from a Network Drive (`/data/`) caused massive congestion and "silent freezes."
+*   **Solution:** Copying PDFs to the node's local NVMe SSD (`/tmp/junjie_pdfs/`) before processing.
+*   **Result:** Significantly reduced startup latency and eliminated "thundering herd" bottlenecks on 60-worker runs.
 
-### Technical Stack Decisions
-*   **OCR Engine:** Tesseract (via `Unstructured`). Chosen for reliability over speed. Future work: `Surya` or `Nougat` for GPU acceleration.
-*   **Chunking:** `chunk_by_title` to preserve semantic sections.
-*   **Table Handling:** `hi_res` strategy converts HTML tables to **Markdown**. This preserves row/column headers for the LLM.
+### Strategy Comparison: "Hi-Res" vs "Fast"
+*   **Hi-Res:** Essential for final research. Preserves tables. Slow (CPU bound OCR).
+*   **Fast:** Used for pipeline verification. Text-only. 10x faster.
+*   **Decision:** Use "Fast" for database structure testing, "Hi-Res" for final "Gold" database build.
 
 ## 2. Infrastructure Setup (Together AI Cluster)
 
