@@ -37,17 +37,23 @@ pip install -r requirements.txt
 
 # 2. Create .env file with API keys
 echo "TOGETHER_API_KEY=your_key" >> .env
-echo "OPENAI_API_KEY=your_key" >> .env
+## 🚀 Quick Start (Cluster)
 
-# 3. Add PDFs to data/test_files/finance-bench-pdfs/
-# Download from: https://github.com/patronus-ai/financebench/tree/main/pdfs
+**1. Process all 367 PDFs (Fast Mode):**
+```bash
+# Takes ~20 minutes on 1 CPU
+python src/ingest.py --fast --chunk-size 1000 --batch-size 20 --data-dir /tmp/junjie_pdfs/
+```
 
-# 4. Build vector database (with metadata)
-python src/ingest.py --sample 5  # Test on 5 PDFs first
-python src/ingest.py             # Full ingestion (2-4 hours)
+**2. Launch Inference Server (Free H100s):**
+```bash
+# Starts Llama-3-70B on 8x H100s
+bash scripts/launch_vllm.sh
+```
 
-# 5. Run evaluation
-python src/bulk_testing.py --pipeline hybrid_filter_rerank --top-k 10
+**3. Run Evaluation:**
+```bash
+python src/bulk_testing.py --model meta-llama/Meta-Llama-3.1-70B-Instruct
 ```
 
 ## Retrieval Pipeline
