@@ -35,6 +35,7 @@ logs/
 
 # Data (large files)
 *.pdf
+!rag/data/test_files/finance-bench-pdfs/*.pdf
 chroma/
 *.bin
 *.pickle
