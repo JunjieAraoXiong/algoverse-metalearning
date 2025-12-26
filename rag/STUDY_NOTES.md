@@ -39,6 +39,18 @@ These notes summarize the architectural and operational lessons learned while bu
     *   **Fix:** When using `--fast` mode (which generates 20k+ chunks per batch), you *must* slice the list into sub-batches of 5000 before adding to DB.
 *   **Lost Environment Variables:** `export` commands only last for the current session. If you log out or open a new terminal, `NLTK_DATA` resets to default (read-only), causing `Permission denied`.
     *   **Fix:** Always run `source venv/bin/activate` AND re-run the `export` commands in every new terminal.
+*   **Hugging Face Gated Models (403 Forbidden):** Even with a valid token, vLLM may fail to download Llama 3 (`GatedRepoError`).
+    *   **Reason:** "Fine-Grained" tokens often block gated models by default.
+    *   **Fix:** Create a "Classic" (Read) token instead of Fine-Grained. Also, ensure you clicked "Agree" on the model page.
+*   **The "Home is Read-Only" Trap:** Tools like `FlashInfer` (vLLM's backend) and `matplotlib` try to write cache files to `~/.cache` or `~/.config` in your home dir, which is read-only on compute nodes.
+    *   **Fix:** You must aggressively redirect *ALL* caches to a writable path (`/data/home/...`):
+        ```bash
+        export XDG_CACHE_HOME=/data/home/username/.cache
+        export VLLM_CONFIG_ROOT=/data/home/username/.config/vllm
+        export FLASHINFER_WORKSPACE_DIR=/data/home/username/.cache/flashinfer
+        ```
+*   **Zombie Processes (Memory Leak):** If a job crashes, the Python process might stay alive, holding onto 30GB+ of GPU RAM. This prevents the next run from starting (`Free memory < 0.95`).
+    *   **Fix:** Check with `nvidia-smi`. Kill with `pkill -u username python`.
 ## Module 6: Industry Intelligence (Gestell.ai Benchmark)
 **The Benchmark:** FinanceBench (50k+ pages, 10k questions).
 *   **Traditional RAG:** ~30-35% accuracy.
