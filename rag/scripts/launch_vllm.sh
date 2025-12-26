@@ -18,5 +18,6 @@ python -m vllm.entrypoints.openai.api_server \
     --model $MODEL \
     --tensor-parallel-size $NUM_GPUS \
     --gpu-memory-utilization 0.95 \
+    --attention-backend flash-attn \
     --port $PORT \
     --host 0.0.0.0
