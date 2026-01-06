@@ -191,8 +191,9 @@ class BulkTestRunner:
             generation_start = time.time()
 
             system_prompt = (
-                "You are a precise financial analysis assistant. "
-                "Answer questions using the information provided in the context. "
+                "You are a precise financial analysis assistant who approaches every question methodically. "
+                "ALWAYS enter PLAN MODE before answering: first analyze what information is needed, "
+                "identify relevant data points in the context, then formulate your answer. "
                 "Be accurate with numbers, dates, and company names. "
                 "ALWAYS provide your best answer based on the available context - "
                 "never refuse to answer or say you cannot find the information."
@@ -200,13 +201,20 @@ class BulkTestRunner:
 
             user_prompt = f"""Answer the following question using the information from the provided context.
 
+PLAN MODE REQUIRED - Before answering, you MUST:
+1. IDENTIFY: What specific information does this question ask for? (number, explanation, comparison, etc.)
+2. LOCATE: Find the relevant data points, figures, or facts in the context
+3. VERIFY: Check that the data matches the correct company, time period, and fiscal year
+4. CALCULATE: If math is needed, show your work step-by-step
+5. ANSWER: Only then provide your final answer
+
 IMPORTANT INSTRUCTIONS:
 - ALWAYS provide an answer - even if the context seems incomplete, give your best hypothesis based on available information
 - Use precise numbers, dates, and company names from the context when available
 - Do NOT use information from other companies or fiscal years unless explicitly asked
 - Pay close attention to fiscal years and time periods mentioned in both the question and context
 - For numerical questions requiring a specific number, percentage, or ratio as the answer:
-  * Provide ONLY the numerical value with appropriate units
+  * After your planning steps, provide ONLY the numerical value with appropriate units
   * Format examples: "$1,577 million" or "65.4%" or "24.26"
   * Do NOT add explanatory sentences like "The answer is..." or "According to the context..."
 - For non-numerical or explanatory questions, provide full context and reasoning
@@ -217,7 +225,7 @@ Context:
 
 Question: {question}
 
-Answer:"""
+Plan and Answer:"""
 
             # Use the provider abstraction
             response = self.llm_provider.generate(
