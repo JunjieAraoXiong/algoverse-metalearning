@@ -20,6 +20,9 @@ MODEL="${MODEL:-meta-llama/Meta-Llama-3.1-70B-Instruct}"
 PORT="${PORT:-8000}"
 NUM_GPUS=8
 
+# Data root - configurable, defaults to /data/$USER
+DATA_ROOT="${DATA_ROOT:-/data/$USER}"
+
 # Print job info
 echo "========================================"
 echo "vLLM Server Launch"
@@ -33,7 +36,7 @@ echo "Tensor Parallel Size: $NUM_GPUS"
 echo "========================================"
 
 # Setup environment
-cd /data/junjiexiong/algoverse/rag
+cd "${DATA_ROOT}/algoverse/rag"
 
 # Activate virtual environment
 if [ -f ".venv/bin/activate" ]; then
@@ -47,9 +50,9 @@ else
 fi
 
 # Set cache directories
-export HF_HOME=/data/junjiexiong/.cache/huggingface
-export NLTK_DATA=/data/junjiexiong/.cache/nltk_data
-export MPLCONFIGDIR=/data/junjiexiong/.cache/matplotlib
+export HF_HOME="${DATA_ROOT}/.cache/huggingface"
+export NLTK_DATA="${DATA_ROOT}/.cache/nltk_data"
+export MPLCONFIGDIR="${DATA_ROOT}/.cache/matplotlib"
 
 # Create logs directory if it doesn't exist
 mkdir -p logs

@@ -5,43 +5,56 @@ Together AI SLURM cluster setup and commands.
 ## SSH Access
 
 ```bash
-# Login
-ssh -J junjiexiong@ssh.t-2fc5bf5b-fa73-47b4-96e1-acdca7819356.s1.us-central-8a.cloud.together.ai junjiexiong@slurm-login
+# Login (replace YOUR_USERNAME and your cluster URL)
+ssh -J YOUR_USERNAME@ssh.<CLUSTER_URL> YOUR_USERNAME@slurm-login
 ```
 
 ## Initial Setup (One-Time)
 
-### 1. Upload Code & ChromaDB (from local machine)
+### 1. Upload Code via Git
 
 ```bash
-# Upload entire project
-rsync -avz --progress -e "ssh -J junjiexiong@ssh.t-2fc5bf5b-fa73-47b4-96e1-acdca7819356.s1.us-central-8a.cloud.together.ai" \
-    /Users/hansonxiong/Desktop/algoverse/rag \
-    junjiexiong@slurm-login:/data/junjiexiong/algoverse/
+# On cluster
+cd /data/$USER
+git clone <your-repo-url> algoverse
+```
+
+Or upload via rsync:
+```bash
+# From local machine
+rsync -avz --progress -e "ssh -J YOUR_USERNAME@ssh.<CLUSTER_URL>" \
+    ./rag \
+    YOUR_USERNAME@slurm-login:/data/$USER/algoverse/
 ```
 
 ### 2. Setup Environment (on cluster)
 
 ```bash
-cd /data/junjiexiong/algoverse/rag
+cd /data/$USER/algoverse/rag
 
+# Use the setup script
+source scripts/setup_env.sh
+```
+
+Or manually:
+```bash
 # Create venv
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Set API keys
-echo 'export TOGETHER_API_KEY="your_key"' >> ~/.bashrc
-source ~/.bashrc
-
-# Set cache paths
+# Set cache paths in ~/.bashrc
 cat >> ~/.bashrc << 'EOF'
-export HF_HOME=/data/junjiexiong/.cache/huggingface
-export NLTK_DATA=/data/junjiexiong/.cache/nltk_data
-export MPLCONFIGDIR=/data/junjiexiong/.cache/matplotlib
+export HF_HOME=/data/$USER/.cache/huggingface
+export NLTK_DATA=/data/$USER/.cache/nltk_data
+export MPLCONFIGDIR=/data/$USER/.cache/matplotlib
 EOF
 source ~/.bashrc
 mkdir -p $HF_HOME $NLTK_DATA $MPLCONFIGDIR
+
+# Set API keys
+echo 'export TOGETHER_API_KEY="your_key"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ### 3. Verify ChromaDB
@@ -67,7 +80,7 @@ tmux new -s rag
 srun --gres=gpu:1 --cpus-per-task=8 --mem=64G --time=04:00:00 --pty bash
 
 # 3. Activate environment
-cd /data/junjiexiong/algoverse/rag
+cd /data/$USER/algoverse/rag
 source .venv/bin/activate
 
 # 4. Run evaluation
@@ -90,7 +103,7 @@ sbatch scripts/eval_job.sh
 
 | Command | Description |
 |---------|-------------|
-| `squeue -u junjiexiong` | Your jobs |
+| `squeue -u $USER` | Your jobs |
 | `scancel <job_id>` | Cancel job |
 | `sinfo` | Cluster status |
 | `tail -f logs/eval_*.out` | Watch output |
@@ -158,6 +171,6 @@ python src/bulk_testing.py \
 
 | Item | Location |
 |------|----------|
-| Project | `/data/junjiexiong/algoverse/rag` |
-| ChromaDB | `/data/junjiexiong/algoverse/rag/chroma` |
-| Results | `/data/junjiexiong/algoverse/rag/bulk_runs` |
+| Project | `/data/$USER/algoverse/rag` |
+| ChromaDB | `/data/$USER/algoverse/rag/chroma` |
+| Results | `/data/$USER/algoverse/rag/bulk_runs` |

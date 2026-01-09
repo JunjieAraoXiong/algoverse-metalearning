@@ -6,7 +6,10 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-CACHE_BASE="/data/junjiexiong/.cache"
+
+# Cache base - configurable via DATA_ROOT env var, defaults to /data/$USER
+DATA_ROOT="${DATA_ROOT:-/data/$USER}"
+CACHE_BASE="${DATA_ROOT}/.cache"
 
 # Set cache paths
 export HF_HOME="${CACHE_BASE}/huggingface"

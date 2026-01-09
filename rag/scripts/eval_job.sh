@@ -18,6 +18,9 @@ PIPELINE="${PIPELINE:-hybrid_filter_rerank}"
 TOP_K="${TOP_K:-10}"
 USE_LLM_JUDGE="${USE_LLM_JUDGE:-false}"
 
+# Data root - configurable, defaults to /data/$USER
+DATA_ROOT="${DATA_ROOT:-/data/$USER}"
+
 # Print job info
 echo "========================================"
 echo "RAG Evaluation Job"
@@ -32,7 +35,7 @@ echo "LLM Judge: $USE_LLM_JUDGE"
 echo "========================================"
 
 # Setup environment
-cd /data/junjiexiong/algoverse/rag
+cd "${DATA_ROOT}/algoverse/rag"
 
 # Activate virtual environment
 if [ -f ".venv/bin/activate" ]; then
@@ -46,9 +49,9 @@ else
 fi
 
 # Set cache directories
-export HF_HOME=/data/junjiexiong/.cache/huggingface
-export NLTK_DATA=/data/junjiexiong/.cache/nltk_data
-export MPLCONFIGDIR=/data/junjiexiong/.cache/matplotlib
+export HF_HOME="${DATA_ROOT}/.cache/huggingface"
+export NLTK_DATA="${DATA_ROOT}/.cache/nltk_data"
+export MPLCONFIGDIR="${DATA_ROOT}/.cache/matplotlib"
 
 # Create logs directory if it doesn't exist
 mkdir -p logs

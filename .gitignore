@@ -48,3 +48,5 @@ bulk_runs/**/*.csv
 bulk_runs/**/*.json
 !bulk_runs/.gitkeep
 notes/
+llm_as_a_judge/
+rag/archive/
