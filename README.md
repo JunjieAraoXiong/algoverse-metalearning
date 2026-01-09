@@ -171,11 +171,6 @@ See `rag/ROADMAP.md` for detailed implementation plan.
 - [PubMedQA](https://pubmedqa.github.io/) - Biomedical QA
 - [CUAD](https://www.atticusprojectai.org/cuad) - Contract Understanding
 
-## Team
-
-- **Contributors**: GarrickPinon, shxwheen, JunjieAraoXiong, aumhirpara2001-stack
-- **License**: MIT
-
 ## Project Status
 
 | Component | Status |
