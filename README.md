@@ -1,4 +1,4 @@
-# Multi-Domain Financial Agent
+# Algoverse - Meta-Learning for RAG Pipeline Selection
 
 A research project exploring **meta-learning for RAG pipeline selection** across multiple domains (Finance, Healthcare, Legal). The core hypothesis: instead of optimizing a single retrieval pipeline, we can learn to *select* the optimal pipeline per question type.
 
@@ -32,61 +32,54 @@ A research project exploring **meta-learning for RAG pipeline selection** across
 ## Repository Structure
 
 ```
-Multi-Domain-Financial-Agent/
-│
+algoverse/
 ├── rag/                          # Core RAG system
-│   ├── src/                      # Implementation
+│   ├── src/
 │   │   ├── config.py             # Central configuration
-│   │   ├── providers/            # LLM adapters (Claude, GPT, Gemini)
+│   │   ├── bulk_testing.py       # Evaluation framework
+│   │   ├── ingest.py             # PDF → ChromaDB ingestion
+│   │   ├── providers/            # LLM adapters (Claude, GPT, Gemini, etc.)
 │   │   ├── retrieval_tools/      # Pipeline components
 │   │   │   ├── semantic.py       # Vector similarity
 │   │   │   ├── hybrid.py         # BM25 + Semantic
 │   │   │   ├── metadata_filter.py# Company/year filtering
-│   │   │   └── rerank.py         # Cross-encoder reranking
-│   │   ├── bulk_testing.py       # Evaluation framework
-│   │   └── meta_learning/        # Meta-router (WIP)
+│   │   │   ├── rerank.py         # Cross-encoder reranking
+│   │   │   └── router.py         # Pipeline routing
+│   │   └── postprocessing/       # Answer post-processing
 │   ├── evaluation/               # Metrics (semantic sim, LLM judge)
-│   ├── dataset_adapters/         # Dataset loaders
-│   └── ROADMAP.md                # Detailed RAG roadmap
-│
-├── llm_as_a_judge/               # LLM-as-a-Judge evaluation
-│   ├── aum_runs/                 # Aum's evaluation results
-│   ├── junjie_runs/              # Junjie's evaluation results
-│   ├── visualizations/           # Generated charts
-│   ├── analyze_results.py        # Analysis script
-│   └── run_judge_evaluation.py   # Evaluation runner
+│   ├── dataset_adapters/         # Dataset loaders (FinanceBench, PubMedQA)
+│   ├── data/                     # Test data and question sets
+│   ├── scripts/                  # SLURM job scripts
+│   └── docs/                     # Documentation
 │
 ├── meta-learning/                # Research materials
-│   ├── files/                    # Reference papers (PDFs)
-│   │   ├── Lec17_Meta_learning.pdf
-│   │   └── 2302.04761.pdf        # Toolformer paper
-│   └── extracted/                # Extracted text for reference
+│   └── extracted/                # Extracted text from papers
 │
-├── notes/                        # Research notes
-│   └── ahkil_group.tex           # Group meeting notes
-│
-└── roadmap.md                    # High-level project roadmap
+└── .claude/                      # Claude Code agents and commands
 ```
 
-## Current Results
+## Quick Start
 
-### LLM-as-a-Judge Evaluation (Best Configs)
+```bash
+# 1. Clone and setup
+git clone https://github.com/JunjieAraoXiong/algoverse-metalearning.git
+cd algoverse-metalearning
+git checkout features/metalearning
 
-| Rank | Configuration | Score | Key Factor |
-|------|---------------|-------|------------|
-| 1 | Element-Based + Forced Answer | **70.4%** | 100% correct doc retrieval |
-| 2 | Element-Based + Hybrid Metadata | 59.8% | Metadata filtering |
-| 3 | 2000-Char Chunking | 50.4% | Larger context |
-| 4 | Character-Based Chunking | 46.9% | Baseline |
+# 2. Setup environment
+cd rag
+pip install -r requirements.txt
 
-### RAG Semantic Similarity Scores
+# 3. Configure API keys
+cp .env.example .env
+# Edit .env with your API keys
 
-| Question Type | Current | Target |
-|---------------|---------|--------|
-| metrics-generated | 0.35 | 0.55+ |
-| domain-relevant | 0.60 | 0.70+ |
-| novel-generated | 0.53 | 0.65+ |
-| **Overall** | **0.495** | **0.65+** |
+# 4. Run evaluation
+python src/bulk_testing.py \
+    --model meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo \
+    --pipeline hybrid_filter_rerank \
+    --top-k 10
+```
 
 ## Available Retrieval Pipelines
 
@@ -97,85 +90,60 @@ Multi-Domain-Financial-Agent/
 | `hybrid_filter` | + Metadata filtering | ~120ms | Domain-specific |
 | `hybrid_filter_rerank` | + Cross-encoder | ~300ms | Production |
 
-## Quick Start
+## Supported LLM Providers
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| Together | Llama 3.1 70B | Free cluster inference |
+| DeepSeek | DeepSeek Chat | Low cost |
+| Google | Gemini 3 Flash | Fast |
+| Anthropic | Claude 4.5 | High quality |
+| OpenAI | GPT-5.2 | High quality |
+
+## Cluster Usage
+
+For Together AI SLURM cluster:
 
 ```bash
-# 1. Clone and setup
-git clone https://github.com/JunjieAraoXiong/algoverse-metalearning.git
-cd algoverse-metalearning
-git checkout features/metalearning
+# Setup environment
+source scripts/setup_env.sh
 
-# 2. Install RAG dependencies
-cd rag
-pip install -r requirements.txt
+# Run evaluation job
+sbatch scripts/eval_job.sh
 
-# 3. Configure API keys
-echo "TOGETHER_API_KEY=your_key" >> rag/.env
-
-# 4. Ingest Data (Fast Mode)
-# Takes ~20 minutes on cluster (skips OCR)
-cd rag
-python src/ingest.py --fast --chunk-size 1000 --batch-size 20 --data-dir /tmp/junjie_pdfs/
-
-# 5. Launch Inference Server (Free H100s)
-# Starts Llama-3-70B on 8x H100s
-bash scripts/launch_vllm.sh
-
-# 6. Run evaluation
-python src/bulk_testing.py --model meta-llama/Meta-Llama-3.1-70B-Instruct --pipeline hybrid_filter_rerank --top-k 10
+# Launch vLLM server (free inference)
+sbatch scripts/launch_vllm.sh
 ```
+
+See [Cluster Guide](rag/docs/cluster.md) for details.
 
 ## Roadmap
 
-### Phase 1: RAG Improvements (90% Complete)
-- [x] Project structure and config system
-- [x] LLM provider abstraction (5 providers)
-- [x] Retrieval pipelines (4 strategies)
-- [x] Metadata extraction and filtering
+### Phase 1: RAG System (Complete)
+- [x] Multi-provider LLM abstraction
+- [x] 4 retrieval pipelines
+- [x] Metadata filtering
 - [x] Evaluation framework
-- [ ] Full ingestion with v2 pipeline
+- [x] Cluster setup scripts
 
 ### Phase 2: Per-File Retrieval
-- [ ] Enhanced metadata extraction from questions
+- [ ] Enhanced question metadata extraction
 - [ ] ChromaDB native filtering
 - [ ] Fallback strategies
 
 ### Phase 3: Question-Type Routing
-- [ ] Question classifier (metrics/domain/novel)
+- [ ] Question classifier
 - [ ] Type-specific prompts
 - [ ] Table-priority retrieval
 
-### Phase 4: Meta-Learning
-- [ ] PubMedQA dataset setup
-- [ ] CUAD dataset setup
+### Phase 4: Meta-Learning Router
+- [ ] Multi-domain datasets (PubMedQA, CUAD)
 - [ ] Oracle labels via grid search
 - [ ] Meta-router training
 - [ ] Cross-domain evaluation
 
-See `rag/ROADMAP.md` for detailed implementation plan.
-
 ## Research References
 
-### Meta-Learning
-- [MAML](https://arxiv.org/abs/1703.03400) - Model-Agnostic Meta-Learning
-- [Prototypical Networks](https://arxiv.org/abs/1703.05175) - Metric-based approach
-- [MetaICL](https://arxiv.org/abs/2205.12755) - In-context learning
-
-### RAG & Retrieval
-- [DPR](https://arxiv.org/abs/2004.04906) - Dense Passage Retrieval
-- [BGE](https://arxiv.org/abs/2309.07597) - Embedding models
+- [FinanceBench](https://arxiv.org/abs/2311.11944) - Financial QA benchmark
 - [Toolformer](https://arxiv.org/abs/2302.04761) - Tool use in LLMs
-
-### Benchmarks
-- [FinanceBench](https://arxiv.org/abs/2311.11944) - Financial QA
-- [PubMedQA](https://pubmedqa.github.io/) - Biomedical QA
-- [CUAD](https://www.atticusprojectai.org/cuad) - Contract Understanding
-
-## Project Status
-
-| Component | Status |
-|-----------|--------|
-| RAG System | Active Development |
-| LLM Judge Evaluation | Complete |
-| Meta-Learning Router | Not Started |
-| Multi-Domain Support | Planned |
+- [MAML](https://arxiv.org/abs/1703.03400) - Model-Agnostic Meta-Learning

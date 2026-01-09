@@ -1,12 +1,6 @@
-# Financial RAG System
+# RAG System
 
-RAG system for financial document QA, evaluated on FinanceBench. Research target: ICLR 2026 FinAI Workshop.
-
-## Status
-
-- **ChromaDB:** 129,949 chunks (ready)
-- **Evaluation:** Working (150 questions)
-- **Cluster:** Together AI SLURM
+RAG system for financial document QA, evaluated on FinanceBench.
 
 ## Quick Start
 
@@ -15,7 +9,8 @@ RAG system for financial document QA, evaluated on FinanceBench. Research target
 pip install -r requirements.txt
 
 # Set API keys
-export TOGETHER_API_KEY="your_key"
+cp .env.example .env
+# Edit .env with your keys
 
 # Run evaluation
 python src/bulk_testing.py \
@@ -31,49 +26,52 @@ rag/
 ├── src/
 │   ├── config.py              # Central configuration
 │   ├── bulk_testing.py        # Evaluation runner
-│   ├── ingest.py              # PDF → ChromaDB (not needed, DB provided)
+│   ├── ingest.py              # PDF → ChromaDB
 │   ├── providers/             # LLM adapters (Anthropic, OpenAI, Google, etc.)
-│   └── retrieval_tools/       # Retrieval pipelines
+│   ├── retrieval_tools/       # Retrieval pipelines
+│   └── postprocessing/        # Answer post-processing
 ├── evaluation/                # Metrics & LLM judge
 ├── dataset_adapters/          # Dataset loaders (FinanceBench, PubMedQA)
-├── chroma/                    # Vector database (129K chunks)
-├── data/question_sets/        # Test questions (150)
+├── data/                      # Question sets and test files
 ├── scripts/                   # SLURM job scripts
 └── docs/                      # Documentation
 ```
 
 ## Retrieval Pipelines
 
-| Pipeline | Latency | Quality | Use Case |
-|----------|---------|---------|----------|
-| `semantic` | ~50ms | Low | Prototyping |
-| `hybrid` | ~100ms | Medium | General |
-| `hybrid_filter` | ~120ms | High | Domain-specific |
-| `hybrid_filter_rerank` | ~300ms | Highest | Production (default) |
-
-## Current Performance
-
-| Question Type | Score | Target |
-|---------------|-------|--------|
-| metrics-generated | 0.35 | 0.55+ |
-| domain-relevant | 0.60 | 0.70+ |
-| novel-generated | 0.53 | 0.65+ |
-| **Overall** | **0.495** | **0.65+** |
+| Pipeline | Latency | Use Case |
+|----------|---------|----------|
+| `semantic` | ~50ms | Prototyping |
+| `hybrid` | ~100ms | General |
+| `hybrid_filter` | ~120ms | Domain-specific |
+| `hybrid_filter_rerank` | ~300ms | Production (default) |
 
 ## Supported Models
 
-| Provider | Models | Cost (150 Qs) |
-|----------|--------|---------------|
-| Together | Llama 3.1 70B | ~$0.50 |
-| DeepSeek | DeepSeek Chat | ~$0.05 |
-| Google | Gemini 3 Flash | ~$0.07 |
-| Anthropic | Claude 4.5 | ~$2.00 |
-| OpenAI | GPT-5.2 | ~$3.20 |
+| Provider | Models |
+|----------|--------|
+| Together | Llama 3.1 70B |
+| DeepSeek | DeepSeek Chat |
+| Google | Gemini 3 Flash |
+| Anthropic | Claude 4.5 |
+| OpenAI | GPT-5.2 |
+
+## Cluster Usage
+
+```bash
+# Setup environment
+source scripts/setup_env.sh
+
+# Run evaluation job
+sbatch scripts/eval_job.sh
+
+# Launch vLLM server
+sbatch scripts/launch_vllm.sh
+```
 
 ## Docs
 
-- [Cluster Guide](docs/cluster.md) — SLURM setup & commands
-- [Status Notes](docs/status.md) — Current project status
+- [Cluster Guide](docs/cluster.md) - SLURM setup & commands
 
 ## Commands
 
