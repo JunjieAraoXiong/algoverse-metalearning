@@ -230,10 +230,11 @@ class RouteConfig:
 ROUTES: Dict[str, RouteConfig] = {
     "metrics-generated": RouteConfig(
         pipeline_id="hybrid_filter_rerank",
-        top_k=5,
-        initial_k_factor=4.0,
+        top_k=10,  # Was 5 - increased to retrieve more table chunks
+        initial_k_factor=6.0,  # Was 4.0 - retrieve 60 docs initially
         use_hyde=False,
         use_table_preference=True,
+        table_quota_ratio=0.9,  # Was 0.6 - prioritize 90% table chunks
     ),
     "domain-relevant": RouteConfig(
         pipeline_id="hybrid_filter_rerank",
@@ -269,6 +270,8 @@ class Defaults:
     top_k: int = 5
     initial_k_factor: float = 3.0
     pipeline_id: str = "hybrid_filter_rerank"
+    ensemble_weights: tuple = (0.3, 0.7)  # (BM25, semantic) - favor semantic for better table matching
+    rerank_threshold: float = 0.0  # Minimum reranker score (0.0 = no filtering, try 0.1-0.3)
 
     # Generation defaults
     temperature: float = 0.0
