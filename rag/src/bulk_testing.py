@@ -358,7 +358,7 @@ Plan and Answer:"""
         output_dir = Path(self.config.output_dir)
         output_dir.mkdir(exist_ok=True)
 
-        filename = self.config.generate_filename(adapter.get_dataset_name())
+        filename = self.config.generate_filename(adapter.name)
         if partial:
             filename = filename.replace('.csv', '_PARTIAL.csv')
 
