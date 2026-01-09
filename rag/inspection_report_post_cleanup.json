@@ -1,0 +1,361 @@
+{
+  "timestamp": "2026-01-09T00:52:55.640006",
+  "summary": {
+    "total_chunks": 121628,
+    "health_score": 60.0,
+    "issues_found": 4,
+    "retrieval_tests": "0/0 passed"
+  },
+  "issues": [
+    "1085 chunks are very short (<100 chars)",
+    "High rate of boundary issues (47828 occurrences)",
+    "14 chunks with garbled text",
+    "101 repeated prefixes (possible boilerplate)"
+  ],
+  "table_ocr": {
+    "total_table_chunks": 45701,
+    "readable_tables": 20,
+    "flattened_tables": 0,
+    "ocr_errors_detected": 25,
+    "samples": [
+      {
+        "id": "49ebff74-f4af-417a-a61b-3f9b780e1b7c",
+        "preview": "C. Revenues and Trade Accounts Receivable\n\nCustomers\u2013\u2013Our prescription biopharmaceutical products, with the exception of Paxlovid, are sold principally to wholesalers, but we also sell directly to retailers, hospitals, clinics, government agencies and pharmacies. We principally sell Paxlovid to gove...",
+        "length": 1961,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 0/O confusion",
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "67aa87ac-a9f3-40ad-b6c3-5b47c4f47a35",
+        "preview": "Consolidated operating income was $1.7 billion in 2017 and included the impact of the items discussed above as well as a full year of operations at Borgata and MGM National Harbor. Operating income of $2.1 billion in 2016 included a $430 million gain recognized on the Borgata acquisition and a $401 ...",
+        "length": 1342,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "e7a899cf-86e2-4baf-863f-91214b1566c7",
+        "preview": "On August 16, 2022, the President signed into law the Inflation Reduction Act of 2022 which contained provisions effective January 1, 2023, including a 15% corporate minimum tax and a 1% excise tax on stock buybacks, both of which we expect to be immaterial to our financial results, financial positi...",
+        "length": 905,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "7dd3fcf4-8070-4561-8b59-c85b5631381b",
+        "preview": "Oo\n\nNon-accelerated filer oOo\n\nSmaller reporting company\n\nOo\n\nEmerging growth company\n\noOo\n\nIf\n\nan emerging growth company, indicate by check mark if the registrant has elected not to use the extended transition period for complying with any new or revised financial accounting standards provided pur...",
+        "length": 1187,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "208dbf95-9f17-43cb-b607-87a112c43e90",
+        "preview": "Shares Carrying value (in millions) Issue date Contractual rate in effect at March 31, 2021 Earliest redemption date Floating annualized rate of three-month LIBOR/ Term SOFR plus: Dividend declared per share Three months ended March 31, March 31, 2021 December 31, 2020 March 31, 2021 December 31, 20...",
+        "length": 1955,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 0/O confusion",
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "de30c376-2f1d-4fd5-a3e8-3306aa01add1",
+        "preview": "In 2016, we determined that we had other-than-temporary declines in the value of Hisun Pfizer, and, therefore, we recognized a loss of $452 million in Other (income)/deductions\u2013\u2013net (see Note 4 ), consisting of losses recognized in the first, second and fourth quarters of 2016. In the first and seco...",
+        "length": 1524,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "426c2f95-685d-4332-a7da-76bacf3b053a",
+        "preview": "Lockheed Martin Corporation Consolidated Balance Sheets (in millions, except par value)\n\nAssets Current assets Cash and cash equivalents Receivables, net Contract assets Inventories Other current assets Total current assets Property, plant and equipment, net Goodwill Intangible assets, net Deferred ...",
+        "length": 1409,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 0/O confusion",
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "61e953bc-27af-49f3-a824-38a7b5eefb9b",
+        "preview": "Research, development and related expenses: These costs are charged to operations in the period incurred and are shown on a separate line of the Consolidated Statement of Income. Research, development and related expenses totaled $1.821 billion in 2018, $1.870 billion in 2017 and $1.764 billion in 2...",
+        "length": 1613,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "a77e9758-5771-4739-821f-e225f82ad55f",
+        "preview": "In the third quarter of 2020, we recorded a non-cash impairment loss of $300 million in SG&A, which was related to the Disposal Group\u2019s goodwill. See Note 4, Acquisitions and Divestitures, for additional information on the Cheese Transaction and its financial statement impacts.\n\nAs of December 26, 2...",
+        "length": 1404,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 0/O confusion",
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "0925d893-0efa-4f4a-9ede-4548771bb7c9",
+        "preview": "Basic earnings per share:\n\nCVS Health\n\nNet income attributable to CVS Health\n\nDiluted earnings per share:\n\nCVS Health\n\nNet income attributable to CVS Health\n\nDividends per share\n\nStock price: (New York Stock Exchange)\n\n67\n\n3.96\n\n177,526\n\n28,857\n\n10,338\n\n5,320\n\n(1)\n\n5,317\n\n4.93\n\n\u2014\n\n4.93\n\n4.91\n\n\u2014\n\n4.9...",
+        "length": 1007,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 0/O confusion",
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "822f6299-b13d-4e9d-b639-69965afa4362",
+        "preview": "Year ended December 31, 2020\n\nWorldwide Sales Change Organic local- Total sales By Business Segment currency sales Acquisitions Divestitures Translation change Safety and Industrial 3.5 % \u2014% (0.6)% (0.7) % 2.2 % Transportation and Electronics (7.1) \u2014 (1.1) 0.2 (8.0) Health Care 1.0 15.5 (4.1) (0.1) ...",
+        "length": 1572,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "699fd933-cf66-4ae3-8090-4ad9f43c5a35",
+        "preview": "table below.\n\nJPMorgan Chase & Co./2022 Form 10-K\n\nThe Firm does not use notional amounts of credit derivatives as the primary measure of risk management for such derivatives, because the notional amount does not take into account the probability of the occurrence of a credit event, the recovery val...",
+        "length": 991,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "aee4c829-855a-4dd7-b102-bf0a1466e2ba",
+        "preview": "FISCAL 2020 COMPARED TO FISCAL 2019\n\nThe Corporate loss before interest and taxes increased $157 million primarily due to the following:\n\n\u2022 an unfavorable change of $494 million, primarily due to the $405 million non-recurring impairment charge discussed above. For more information see Note 20 \u2014 Acq...",
+        "length": 1053,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "a41b2f03-1ed7-49df-b00c-0782721f8897",
+        "preview": "Operating expenses as a percentage of segment net sales increased 41 basis points and decreased 71 basis points for fiscal 2023 and 2022, respectively, when compared to the previous fiscal year. The increase in operating expenses as a percentage of segment net sales for fiscal 2023 was primarily due...",
+        "length": 1076,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "5e0701c6-6f4c-4860-8939-67930039ba4f",
+        "preview": "Total\n\n$\n\n\u2014 $\n\n8,368 $\n\n317 $\n\n8,685\n\n(1) Quoted prices in active markets for identical assets or liabilities.\n\n(2) Observable inputs other than quoted prices in active markets for identical assets and liabilities.\n\n(3) Unobservable pricing inputs in the market.\n\nVerizon 2022 Annual Report on Form 1...",
+        "length": 1234,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "93c20a76-a5ae-42d8-8d13-bab806859498",
+        "preview": "Quarterly Financial Data (Unaudited, in millions, except per share amounts)\n\nQuarter Ended\n\nMarch 31 June 30 September 30 December 31 $ 2,137 $ 2,230 $ 2,217 $ $ 1,660 $ 1,737 $ 1,719 $ $ 482 $ 437 $ 418 $ \u2014 (2) (5) $ 482 $ 435 $ 413 $ Continuing operations $ 0.42 $ 0.38 $ 0.37 $ Discontinued operat...",
+        "length": 1194,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "707047f2-1fc3-4f18-89eb-d1d394df52cd",
+        "preview": "b)\n\n1. Sells goods or merchandise at retail to consumers and/or businesses (whether through physical locations, via the internet or combined) or has plans to sell goods or merchandise at retail to consumers and/or businesses (whether through physical locations, via the internet or combined) within t...",
+        "length": 1753,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "65c01012-7d1d-4ea0-99df-3f63334333d2",
+        "preview": "(in millions) 2020 2021 2022 2023 2024 Internal-use software $ 34 $ 31 $ 22 $ 17 $ 15 Contracts 4 4 4 4 4 Other 6 5 5 5 5 Total $ 44 $ 40 $ 31 $ 26 $ 24\n\nIntangible asset amortization expense was $45 million, $47 million and $34 million for the years ended December 31, 2019, 2018 and 2017, respectiv...",
+        "length": 1506,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "9759da45-9c12-48ad-b824-59690b44beda",
+        "preview": "ification of tain Cash ipts and Cash ments on the fement of Cash ws, Provides guidance on the presentation and classification in the Consolidated Statements of Cash Flows for the following cash receipts and payments: (i) debt prepayment or debt extinguishment costs; (ii) settlement of zero-coupon de...",
+        "length": 1369,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      },
+      {
+        "id": "e633e8ae-481b-4442-b109-4d7e8526101c",
+        "preview": "Guidance and Outlook\n\nThe Company provides guidance on a non-GAAP basis as we cannot predict certain elements which are included in reported GAAP results, including the impact of foreign exchange translation and commodity mark-to-market net impacts.\n\nFor 2023, the Company expects:\n\n\u2022 A 6 percent inc...",
+        "length": 1191,
+        "has_pipe_tables": false,
+        "has_numbers": true,
+        "issues": [
+          "Possible 1/l/I confusion"
+        ]
+      }
+    ],
+    "issues": []
+  },
+  "chunking_metadata": {
+    "total_chunks": 121628,
+    "chunk_size_stats": {
+      "min": 1,
+      "max": 2000,
+      "mean": 1380.1085440852435,
+      "median": 1483
+    },
+    "metadata_completeness": {
+      "filename": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "page_number": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "filetype": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "source": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "orig_elements": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "languages": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "last_modified": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "file_directory": {
+        "count": 121628,
+        "percentage": 100.0
+      },
+      "text_as_html": {
+        "count": 26244,
+        "percentage": 21.58
+      },
+      "is_continuation": {
+        "count": 3714,
+        "percentage": 3.05
+      }
+    },
+    "boundary_issues": 47828,
+    "empty_chunks": 0,
+    "issues": [
+      "1085 chunks are very short (<100 chars)",
+      "High rate of boundary issues (47828 occurrences)"
+    ]
+  },
+  "database_hygiene": {
+    "duplicates": {
+      "exact": 0,
+      "near": 0,
+      "examples": [
+        {
+          "prefix": "ACTIVISION BLIZZARD, INC. AND SUBSIDIARIES\n\nNotes ...",
+          "count": 86
+        },
+        {
+          "prefix": "POWER OF ATTORNEY\n\nLOCKHEED MARTIN CORPORATION\n\nTh...",
+          "count": 84
+        },
+        {
+          "prefix": "We also have audited, in accordance with the stand...",
+          "count": 54
+        },
+        {
+          "prefix": "A company\u2019s internal control over financial report...",
+          "count": 54
+        },
+        {
+          "prefix": "Critical Audit Matters\n\nThe critical audit matters...",
+          "count": 52
+        }
+      ]
+    },
+    "garbled_chunks": 14,
+    "boilerplate_chunks": 2093,
+    "document_coverage": {
+      "total_documents": 361,
+      "chunks_per_doc": {
+        "min": 3,
+        "max": 1269,
+        "mean": 336.9196675900277
+      },
+      "top_10": {
+        "PFIZER_2018_10K.pdf": 1269,
+        "PG_E_2021_10K.pdf": 1183,
+        "JPMORGAN_2022_10K.pdf": 1069,
+        "CVSHEALTH_2018_10K.pdf": 1014,
+        "PG_E_2019_10K.pdf": 1011,
+        "JPMORGAN_2021_10K.pdf": 987,
+        "BLOCK_2021_10K.pdf": 984,
+        "PG_E_2023Q3_10Q.pdf": 982,
+        "PG_E_2020_10K.pdf": 964,
+        "KRAFTHEINZ_2018_10K.pdf": 950
+      },
+      "bottom_10": {
+        "COSTCO_2023Q1_EARNINGS.pdf": 6,
+        "PEPSICO_2023_8K_dated-2023-05-05.pdf": 6,
+        "MCDONALDS_8K_dated-2023-02-13.pdf": 5,
+        "ULTABEAUTY_2023_8K_dated-2023-09-18.pdf": 5,
+        "EBAY_2023Q1_8K.pdf": 5,
+        "COSTCO_2023_8K_dated-2023-08-16.pdf": 4,
+        "FOOTLOCKER_2022_8K_dated_2023-02-21.pdf": 4,
+        "EBAY_2023Q2_8K.pdf": 4,
+        "BESTBUY_2023_8K_dated-2023-04-24.pdf": 3,
+        "JOHNSON_JOHNSON_2023_8K_dated-2023-08-23.pdf": 3
+      }
+    },
+    "issues": [
+      "14 chunks with garbled text",
+      "101 repeated prefixes (possible boilerplate)"
+    ]
+  },
+  "retrieval_tests": {
+    "tests": [],
+    "passed": 0,
+    "failed": 0
+  },
+  "recommendations": [
+    "Review and potentially re-ingest documents with garbled text (14 chunks affected)",
+    "Consider filtering repetitive boilerplate content (headers, footers, disclaimers)"
+  ]
+}

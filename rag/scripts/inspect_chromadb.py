@@ -502,11 +502,18 @@ def main():
         action="store_true",
         help="Skip retrieval tests (faster)",
     )
+    parser.add_argument(
+        "--embedding",
+        default="openai-large",
+        help="Embedding model to use for retrieval tests (default: openai-large). "
+             "Must match what ChromaDB was built with.",
+    )
 
     args = parser.parse_args()
 
     print(f"Loading ChromaDB from {args.chroma_path}...")
-    db = load_chromadb(args.chroma_path)
+    print(f"Using embedding model: {args.embedding}")
+    db = load_chromadb(args.chroma_path, args.embedding)
 
     print("Fetching all chunks...")
     chunks = get_all_chunks(db)

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-01-09T00:52:01.230530",
+  "mode": "execute",
+  "initial_count": 129949,
+  "removals": {
+    "duplicates": 8320,
+    "empty": 4
+  },
+  "to_remove": 8321,
+  "final_count": 121628,
+  "deleted": 8321
+}

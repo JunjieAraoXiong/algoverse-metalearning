@@ -76,20 +76,28 @@ Respond with JSON only: {"type": "<type>", "confidence": <0.0-1.0>, "reasoning":
 
     def classify(self, question: str) -> ClassificationResult:
         """Classify question into a type."""
-        cache_key = hash(question)
+        cache_key = question  # Use question directly as key (stable, no collision risk)
         if self._cache_enabled and cache_key in self._result_cache:
             return self._result_cache[cache_key]
 
-        user_prompt = f"Classify this question: {question}"
+        try:
+            user_prompt = f"Classify this question: {question}"
 
-        response = self.provider.generate(
-            system_prompt=self.SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            max_tokens=150,
-            temperature=0.0
-        )
+            response = self.provider.generate(
+                system_prompt=self.SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                max_tokens=150,
+                temperature=0.0
+            )
 
-        result = self._parse_response(response.content)
+            result = self._parse_response(response.content)
+        except Exception as e:
+            # Fall back to default classification on any error
+            result = ClassificationResult(
+                question_type="domain-relevant",
+                confidence=0.0,
+                reasoning=f"Classification failed: {str(e)}"
+            )
 
         if self._cache_enabled:
             self._result_cache[cache_key] = result
@@ -99,12 +107,14 @@ Respond with JSON only: {"type": "<type>", "confidence": <0.0-1.0>, "reasoning":
     def _parse_response(self, response: str) -> ClassificationResult:
         """Parse LLM response into ClassificationResult."""
         try:
-            # Handle potential markdown code blocks
+            # Handle potential markdown code blocks more robustly
             content = response.strip()
             if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
+                parts = content.split("```")
+                if len(parts) >= 3:  # Proper code block: ```...```
+                    content = parts[1]
+                    if content.startswith("json"):
+                        content = content[4:]
             content = content.strip()
 
             data = json.loads(content)
@@ -181,17 +191,24 @@ The passage should be 2-3 sentences and sound like an actual excerpt."""
         return self._provider
 
     def generate_hypothetical_document(self, question: str) -> str:
-        """Generate a hypothetical answer passage for the question."""
-        user_prompt = f"Generate a hypothetical passage answering: {question}"
+        """Generate a hypothetical answer passage for the question.
 
-        response = self.provider.generate(
-            system_prompt=self.SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            max_tokens=200,
-            temperature=0.3
-        )
+        Returns the question itself as fallback if generation fails.
+        """
+        try:
+            user_prompt = f"Generate a hypothetical passage answering: {question}"
 
-        return response.content
+            response = self.provider.generate(
+                system_prompt=self.SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                max_tokens=200,
+                temperature=0.3
+            )
+
+            return response.content
+        except Exception:
+            # Fall back to using the question itself for embedding
+            return question
 
 
 def get_hyde_generator(
@@ -318,12 +335,12 @@ class RoutedPipeline(RetrievalPipeline):
         self._reranker_model = reranker_model
 
         # Cache for pipelines (lazy initialization)
-        self._pipeline_cache: Dict[str, Any] = {}
+        self._pipeline_cache: Dict[tuple, Any] = {}
         self._hyde_retriever: Optional[HyDERetriever] = None
 
     def _get_pipeline(self, route) -> Any:
         """Get or create a SimplePipeline for the route."""
-        cache_key = f"{route.pipeline_id}_{route.top_k}_{route.initial_k_factor}"
+        cache_key = (route.pipeline_id, route.top_k, route.initial_k_factor)
 
         if cache_key not in self._pipeline_cache:
             retriever, set_k_fn, take_top_k_fn = build_retriever_for_pipeline(

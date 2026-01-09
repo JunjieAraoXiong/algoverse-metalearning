@@ -106,4 +106,8 @@ def build_pipeline(
 
 def list_pipelines() -> List[str]:
     """Return supported pipeline ids."""
-    return ["semantic", "hybrid", "hybrid_filter", "hybrid_filter_rerank"]
+    return ["semantic", "hybrid", "hybrid_filter", "hybrid_filter_rerank", "routed"]
+
+
+# Re-export routed pipeline builder for convenience
+from .router import build_routed_pipeline
