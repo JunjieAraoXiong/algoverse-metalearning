@@ -173,6 +173,8 @@ def get_provider_for_model(model_name: str) -> str:
     elif "deepseek" in model_lower and not model_lower.startswith("deepseek-ai/"):
         return "deepseek"
     elif "meta-llama" in model_lower:
+        if "turbo" in model_lower:
+            return "together"  # Turbo models use Together API
         return "local-vllm"
     return "together"
 
