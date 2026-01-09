@@ -7,7 +7,8 @@ from langchain_core.documents import Document
 
 def build_hybrid_retriever(db: Chroma, top_k: int) -> Any:
     """Create an ensemble of BM25 + semantic retrievers."""
-    from langchain.retrievers import BM25Retriever, EnsembleRetriever
+    from langchain_community.retrievers import BM25Retriever
+    from langchain.retrievers import EnsembleRetriever
 
     all_docs = db.get()
     from langchain_core.documents import Document as LCDocument
