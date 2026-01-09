@@ -41,3 +41,6 @@ pillow>=10.0.0
 
 # HTML parsing for table conversion
 beautifulsoup4>=4.12.0
+
+# Inference Server
+vllm>=0.6.3

@@ -211,6 +211,46 @@ RERANKERS: Dict[str, RerankerConfig] = {
 
 
 # =============================================================================
+# Router Configuration
+# =============================================================================
+
+@dataclass
+class RouteConfig:
+    """Configuration for a specific question type route."""
+    pipeline_id: str
+    top_k: int
+    initial_k_factor: float
+    use_hyde: bool = False
+    use_table_preference: bool = False
+    table_quota_ratio: float = 0.6
+
+
+ROUTES: Dict[str, RouteConfig] = {
+    "metrics-generated": RouteConfig(
+        pipeline_id="hybrid_filter_rerank",
+        top_k=5,
+        initial_k_factor=4.0,
+        use_hyde=False,
+        use_table_preference=True,
+    ),
+    "domain-relevant": RouteConfig(
+        pipeline_id="hybrid_filter_rerank",
+        top_k=5,
+        initial_k_factor=3.0,
+        use_hyde=False,
+        use_table_preference=False,
+    ),
+    "novel-generated": RouteConfig(
+        pipeline_id="hybrid_filter_rerank",
+        top_k=8,
+        initial_k_factor=3.0,
+        use_hyde=True,
+        use_table_preference=False,
+    ),
+}
+
+
+# =============================================================================
 # Default Settings
 # =============================================================================
 
@@ -231,6 +271,10 @@ class Defaults:
     # Generation defaults
     temperature: float = 0.0
     max_tokens: int = 512
+
+    # Router defaults
+    router_classifier_model: str = "gpt-4o-mini"
+    router_hyde_model: str = "gpt-4o-mini"
 
     # Paths (relative to project root)
     chroma_path: str = "chroma"
@@ -283,7 +327,7 @@ def get_model_abbrev(model_name: str) -> str:
 # Pipeline Configuration
 # =============================================================================
 
-PIPELINES = ["semantic", "hybrid", "hybrid_filter", "hybrid_filter_rerank"]
+PIPELINES = ["semantic", "hybrid", "hybrid_filter", "hybrid_filter_rerank", "routed"]
 
 
 def get_pipeline_flags(pipeline_id: str) -> tuple:

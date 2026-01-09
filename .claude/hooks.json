@@ -1,0 +1,23 @@
+{
+  "PostToolUse": [
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bun run format || true"
+        }
+      ]
+    }
+  ],
+  "AgentStop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bun run test || true"
+        }
+      ]
+    }
+  ]
+}

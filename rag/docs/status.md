@@ -259,3 +259,11 @@ rag/
 ---
 
 *Last updated: December 2024*
+
+## Cluster Environment Questions (For Advisor/Admin)
+**Issue:** Cannot connect to active job from second terminal.
+**Context:** I have an active job running on a compute node (e.g., `gpu-dp-mwm8b-2pt6s`). I want to open a second shell to that same node to monitor GPU usage or launch a second process.
+**Observation:**
+1. `ssh <node_name>` fails with `Permission denied (publickey)`. Keys don't seem to forward from login node to compute node.
+2. `srun --jobid=<active_job_id> --pty bash` hangs indefinitely.
+**Question:** Is there a supported way to open multiple shells into a running allocation? Or is `tmux` inside the primary session the only supported workflow?
