@@ -432,6 +432,10 @@ def main():
         '--judge-model', type=str, default=DEFAULTS.judge_model,
         help=f'Judge model (default: {DEFAULTS.judge_model})'
     )
+    parser.add_argument(
+        '--embedding', type=str, default=DEFAULTS.embedding_model,
+        help=f'Embedding model (default: {DEFAULTS.embedding_model}). Use "openai-large" for ChromaDB built with OpenAI embeddings.'
+    )
 
     args = parser.parse_args()
 
@@ -440,6 +444,7 @@ def main():
         dataset_name=args.dataset,
         pipeline_id=args.pipeline,
         model_name=args.model,
+        embedding_model=args.embedding,
         top_k_retrieval=args.top_k,
         initial_k_factor=args.initial_k_factor,
         reranker_model=args.reranker,
