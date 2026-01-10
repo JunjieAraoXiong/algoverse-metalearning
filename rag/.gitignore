@@ -30,8 +30,14 @@ htmlcov/
 
 # Project-specific
 chroma/
+chroma_*/
 .claude/
+bulk_runs/
+logs/
+.cache/
 
 # Temporary files
 *.log
 *.tmp
+# Related work repos (reference only, not committed)
+related_repos/

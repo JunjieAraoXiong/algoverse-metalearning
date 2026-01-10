@@ -28,17 +28,13 @@ google-generativeai>=0.8.0
 # Environment management
 python-dotenv>=1.0.0
 
-# Document processing
-unstructured>=0.10.0
-unstructured[pdf]>=0.10.0
+# Document processing (Docling for PDF ingestion)
+docling>=2.0.0  # Best-in-class table extraction (97.9% accuracy)
+pillow>=10.0.0  # Image processing
 
 # Reranking and local embeddings
 sentence-transformers>=2.2.0
 langchain-huggingface>=0.0.3
-
-# PDF processing dependencies for unstructured
-pytesseract>=0.3.10
-pillow>=10.0.0
 
 # HTML parsing for table conversion
 beautifulsoup4>=4.12.0
