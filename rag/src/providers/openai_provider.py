@@ -32,15 +32,24 @@ class OpenAIProvider(LLMProvider):
         max_tokens: int = 512,
         temperature: float = 0.0,
     ) -> LLMResponse:
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
+        # GPT-5.x models require max_completion_tokens instead of max_tokens
+        use_new_param = self.model_name.startswith("gpt-5") or "o1" in self.model_name or "o3" in self.model_name
+
+        kwargs = {
+            "model": self.model_name,
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+            "temperature": temperature,
+        }
+
+        if use_new_param:
+            kwargs["max_completion_tokens"] = max_tokens
+        else:
+            kwargs["max_tokens"] = max_tokens
+
+        response = self.client.chat.completions.create(**kwargs)
 
         content = ""
         if response and response.choices:

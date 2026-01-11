@@ -109,12 +109,32 @@ def extract_metadata_from_question(question: str) -> Dict[str, any]:
         'doc_types': []
     }
 
-    # Common company names in FinanceBench
+    # All companies in FinanceBench dataset (including variations)
     companies = [
+        # Original list
         '3M', 'Adobe', 'Apple', 'Microsoft', 'Amazon', 'Netflix',
         'Oracle', 'Block', 'Square', 'Costco', 'CVS', 'AES',
         'Activision Blizzard', 'American Express', 'Best Buy',
-        'Coca-Cola', 'Boeing', 'Pfizer', 'Walmart'
+        'Coca-Cola', 'Boeing', 'Pfizer', 'Walmart',
+        # Additional companies from FinanceBench
+        'AMD', 'Advanced Micro Devices',
+        'Amcor', 'AMCOR',
+        'American Water Works', 'American Water',
+        'Corning',
+        'CVS Health', 'CVSHEALTH',
+        'General Mills', 'GeneralMills',
+        'JPMorgan', 'JP Morgan', 'JPMorgan Chase',
+        'MGM Resorts', 'MGM', 'MGMRESORTS',
+        'Nike', 'NIKE',
+        'PayPal', 'Paypal',
+        'Ulta Beauty', 'Ulta', 'ULTABEAUTY',
+        'Verizon',
+        # Companies from missing PDFs (for future)
+        'Johnson & Johnson', 'Johnson and Johnson', 'J&J',
+        'PepsiCo', 'Pepsi',
+        'Lockheed Martin', 'Lockheed',
+        'Kraft Heinz', 'Kraft',
+        'Foot Locker', 'FootLocker',
     ]
 
     # Extract companies (case insensitive)

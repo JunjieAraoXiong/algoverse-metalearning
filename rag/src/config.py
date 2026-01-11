@@ -81,7 +81,13 @@ def get_embedding_model(embedding_name: str = "bge-large"):
     if config.provider == "local":
         from langchain_huggingface import HuggingFaceEmbeddings
         import torch
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Device selection: CUDA > MPS (Apple Metal) > CPU
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
         print(f"Using device: {device} for embeddings")
         return HuggingFaceEmbeddings(
             model_name=config.model_id,
