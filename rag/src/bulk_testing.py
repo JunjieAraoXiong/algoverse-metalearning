@@ -27,10 +27,12 @@ from evaluation.metrics import (
     format_metrics_summary
 )
 from evaluation.llm_judge import llm_as_judge
+from src.postprocessing.numeric_verify import verify_numeric_answer
 from src.retrieval_tools.tool_registry import (
     build_pipeline,
     build_retriever_for_pipeline,
 )
+from src.retrieval_tools.router import build_routed_pipeline
 from src.config import (
     DEFAULTS,
     PIPELINES,
@@ -73,10 +75,15 @@ class BulkTestConfig:
     # Evaluation settings
     use_llm_judge: bool = False
     judge_model: str = DEFAULTS.judge_model
+    use_numeric_verify: bool = False
 
     # Paths
     chroma_path: str = DEFAULTS.chroma_path
     output_dir: str = DEFAULTS.output_dir
+
+    # Router settings (for pipeline_id="routed")
+    router_classifier_model: str = DEFAULTS.router_classifier_model
+    router_hyde_model: str = DEFAULTS.router_hyde_model
 
     # Runtime metadata
     timestamp: str = None
@@ -136,19 +143,31 @@ class BulkTestRunner:
             )
 
             print(f"  Creating retriever for pipeline: {self.config.pipeline_id}")
-            retriever, set_k_fn, take_top_k_fn = build_retriever_for_pipeline(
-                self.config.pipeline_id, db, top_k=self.config.top_k_retrieval
-            )
-            self.retriever = retriever
-            self.pipeline = build_pipeline(
-                pipeline_id=self.config.pipeline_id,
-                retriever=retriever,
-                top_k=self.config.top_k_retrieval,
-                initial_k_factor=self.config.initial_k_factor,
-                set_k_fn=set_k_fn,
-                take_top_k_fn=take_top_k_fn,
-                reranker_model=self.config.reranker_model,
-            )
+
+            if self.config.pipeline_id == "routed":
+                # Use the question-type router for adaptive retrieval
+                self.pipeline = build_routed_pipeline(
+                    db=db,
+                    embedding_fn=self.embeddings,
+                    classifier_model=self.config.router_classifier_model,
+                    hyde_model=self.config.router_hyde_model,
+                    reranker_model=self.config.reranker_model,
+                )
+            else:
+                # Standard pipeline
+                retriever, set_k_fn, take_top_k_fn = build_retriever_for_pipeline(
+                    self.config.pipeline_id, db, top_k=self.config.top_k_retrieval
+                )
+                self.retriever = retriever
+                self.pipeline = build_pipeline(
+                    pipeline_id=self.config.pipeline_id,
+                    retriever=retriever,
+                    top_k=self.config.top_k_retrieval,
+                    initial_k_factor=self.config.initial_k_factor,
+                    set_k_fn=set_k_fn,
+                    take_top_k_fn=take_top_k_fn,
+                    reranker_model=self.config.reranker_model,
+                )
 
             # Initialize LLM provider
             provider_name = get_provider_for_model(self.config.model_name)
@@ -239,6 +258,11 @@ Plan and Answer:"""
 
             if response.content:
                 result['predicted_answer'] = response.content
+
+                # Numeric verification - check if numbers in answer exist in sources
+                verification = verify_numeric_answer(response.content, docs)
+                result['numeric_score'] = verification.score
+                result['flagged_numbers'] = verification.flagged_numbers
             else:
                 result['error'] = "Empty response from LLM"
 
@@ -324,6 +348,8 @@ Plan and Answer:"""
                     'gold_answer': gold_answer,
                     'predicted_answer': result['predicted_answer'],
                     'semantic_similarity': sem_sim,
+                    'numeric_score': result.get('numeric_score'),
+                    'flagged_numbers': str(result.get('flagged_numbers', [])),
                     'retrieval_time_ms': result['retrieval_time_ms'],
                     'generation_time_ms': result['generation_time_ms'],
                     'sources': sources_str,
@@ -429,12 +455,28 @@ def main():
         help='Enable LLM-as-a-Judge evaluation'
     )
     parser.add_argument(
+        '--use-numeric-verify', action='store_true',
+        help='Enable numeric verification to detect hallucinated numbers'
+    )
+    parser.add_argument(
         '--judge-model', type=str, default=DEFAULTS.judge_model,
         help=f'Judge model (default: {DEFAULTS.judge_model})'
     )
     parser.add_argument(
         '--embedding', type=str, default=DEFAULTS.embedding_model,
         help=f'Embedding model (default: {DEFAULTS.embedding_model}). Use "openai-large" for ChromaDB built with OpenAI embeddings.'
+    )
+    parser.add_argument(
+        '--chroma-path', type=str, default=None,
+        help='Path to ChromaDB directory (overrides default dataset-based path)'
+    )
+    parser.add_argument(
+        '--router-classifier-model', type=str, default=DEFAULTS.router_classifier_model,
+        help=f'Model for question classification in routed pipeline (default: {DEFAULTS.router_classifier_model})'
+    )
+    parser.add_argument(
+        '--router-hyde-model', type=str, default=DEFAULTS.router_hyde_model,
+        help=f'Model for HyDE generation in routed pipeline (default: {DEFAULTS.router_hyde_model})'
     )
 
     args = parser.parse_args()
@@ -451,16 +493,22 @@ def main():
         temperature=args.temperature,
         max_tokens=args.max_tokens,
         use_llm_judge=args.use_llm_judge,
-        judge_model=args.judge_model
+        judge_model=args.judge_model,
+        router_classifier_model=args.router_classifier_model,
+        router_hyde_model=args.router_hyde_model,
     )
 
-    # Auto-adjust chroma path for known datasets if user did not override
-    ds = args.dataset.lower()
-    if config.chroma_path.endswith(DEFAULTS.chroma_path):
-        if ds == 'pubmedqa':
-            config.chroma_path = str(Path(__file__).parent.parent / "chroma_pubmedqa")
-        elif ds == 'financebench':
-            config.chroma_path = str(Path(__file__).parent.parent / "chroma")
+    # Handle chroma path - explicit override takes precedence
+    if args.chroma_path:
+        config.chroma_path = str(Path(__file__).parent.parent / args.chroma_path)
+    else:
+        # Auto-adjust chroma path for known datasets
+        ds = args.dataset.lower()
+        if config.chroma_path.endswith(DEFAULTS.chroma_path):
+            if ds == 'pubmedqa':
+                config.chroma_path = str(Path(__file__).parent.parent / "chroma_pubmedqa")
+            elif ds == 'financebench':
+                config.chroma_path = str(Path(__file__).parent.parent / "chroma")
 
     # Select dataset adapter
     ds = args.dataset.lower()
