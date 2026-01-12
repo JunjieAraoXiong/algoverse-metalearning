@@ -1,6 +1,6 @@
 """Registry for retrieval pipelines/policies."""
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from langchain_core.documents import Document
 
 from .base import RetrievalPipeline
@@ -8,10 +8,15 @@ from .semantic import build_semantic_retriever, set_retriever_k as set_semantic_
 from .hybrid import build_hybrid_retriever, set_retriever_k as set_hybrid_k, take_top_k as take_hybrid_top_k
 from .metadata_filter import filter_with_question_metadata
 from .rerank import get_reranker
+from .rse import extract_relevant_segments
 
 
 class SimplePipeline(RetrievalPipeline):
-    """Composable retrieval pipeline."""
+    """Composable retrieval pipeline.
+
+    Supports RSE (Relevant Segment Extraction) for merging adjacent chunks
+    into coherent segments, providing richer context for complex questions.
+    """
 
     def __init__(
         self,
@@ -23,6 +28,8 @@ class SimplePipeline(RetrievalPipeline):
         set_k_fn,
         take_top_k_fn,
         reranker_model: str = None,
+        use_rse: bool = False,
+        rse_preset: str = "balanced",
     ):
         self.retriever = retriever
         self.top_k = top_k
@@ -33,8 +40,14 @@ class SimplePipeline(RetrievalPipeline):
         self._take_top_k = take_top_k_fn
         self._reranker = None
         self._reranker_model = reranker_model
+        self.use_rse = use_rse
+        self.rse_preset = rse_preset
 
     def retrieve(self, question: str) -> List[Document]:
+        """Retrieve documents for a question.
+
+        Returns List[Document] normally, or applies RSE if enabled.
+        """
         multiplier = self.initial_k_factor if (self.use_metadata_filter or self.use_rerank) else 1.0
         initial_k = max(self.top_k, int(self.top_k * multiplier))
         self._set_k(self.retriever, initial_k)
@@ -55,6 +68,28 @@ class SimplePipeline(RetrievalPipeline):
             docs = self._take_top_k(docs, self.top_k)
 
         return docs
+
+    def retrieve_segments(self, question: str) -> List[str]:
+        """Retrieve and merge into segments using RSE.
+
+        Always applies RSE regardless of use_rse flag.
+        Use this when you want segment-level context.
+        """
+        docs = self.retrieve(question)
+        if not docs:
+            return []
+
+        # Get relevance scores from metadata if available (set by Cohere reranker)
+        relevance_scores = [
+            doc.metadata.get("rerank_score", 1.0 / (i + 1))
+            for i, doc in enumerate(docs)
+        ]
+
+        return extract_relevant_segments(
+            docs,
+            relevance_scores=relevance_scores,
+            preset=self.rse_preset,
+        )
 
 
 def _pipeline_flags(pipeline_id: str) -> Tuple[bool, bool, bool]:
@@ -88,8 +123,22 @@ def build_pipeline(
     set_k_fn,
     take_top_k_fn,
     reranker_model: str = None,
+    use_rse: bool = False,
+    rse_preset: str = "balanced",
 ) -> SimplePipeline:
-    """Construct a SimplePipeline for the pipeline id."""
+    """Construct a SimplePipeline for the pipeline id.
+
+    Args:
+        pipeline_id: One of "semantic", "hybrid", "hybrid_filter", "hybrid_filter_rerank"
+        retriever: The base retriever to use
+        top_k: Number of documents to return
+        initial_k_factor: Multiplier for initial retrieval (before filtering/reranking)
+        set_k_fn: Function to set k on the retriever
+        take_top_k_fn: Function to take top k from results
+        reranker_model: Reranker model name (if using reranking)
+        use_rse: Enable RSE (Relevant Segment Extraction) for retrieve_segments()
+        rse_preset: RSE preset ("balanced", "precision", "find_all")
+    """
     use_hybrid, use_filter, use_rerank = _pipeline_flags(pipeline_id)
     # use_hybrid is already baked into retriever selection
     return SimplePipeline(
@@ -101,6 +150,8 @@ def build_pipeline(
         set_k_fn=set_k_fn,
         take_top_k_fn=take_top_k_fn,
         reranker_model=reranker_model,
+        use_rse=use_rse,
+        rse_preset=rse_preset,
     )
 
 

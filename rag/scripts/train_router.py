@@ -1,0 +1,389 @@
+#!/usr/bin/env python3
+"""Train the meta-learning pipeline router.
+
+Uses oracle labels to train a classifier that predicts the best pipeline
+configuration for each question based on extracted features.
+
+Usage:
+    python scripts/train_router.py [--oracle-labels PATH] [--output-dir DIR]
+
+Output:
+    models/
+    ├── router_rf.joblib      # Trained RandomForest model
+    ├── scaler.joblib         # Feature scaler
+    ├── metadata.json         # Model metadata
+    └── training_report.json  # Training metrics and analysis
+"""
+
+import sys
+import json
+import argparse
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, Any, List, Tuple
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.metrics import classification_report, confusion_matrix
+import joblib
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.meta_learning.features import (
+    extract_features,
+    extract_features_batch,
+    QuestionFeatures,
+)
+from src.meta_learning.router import PIPELINE_CLASSES
+
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+DEFAULT_ORACLE_LABELS = "data/oracle_labels.json"
+DEFAULT_OUTPUT_DIR = "models"
+
+
+# =============================================================================
+# Router Trainer
+# =============================================================================
+
+class RouterTrainer:
+    """Trains the pipeline routing classifier."""
+
+    def __init__(self, oracle_labels_path: str):
+        self.oracle_labels_path = oracle_labels_path
+        self.labels_data = None
+        self.X = None  # Feature matrix
+        self.y = None  # Target labels
+        self.feature_names = None
+        self.label_encoder = LabelEncoder()
+
+    def load_labels(self):
+        """Load oracle labels from JSON file."""
+        print(f"\nLoading oracle labels from: {self.oracle_labels_path}")
+
+        with open(self.oracle_labels_path, "r") as f:
+            data = json.load(f)
+
+        self.labels_data = data.get("labels", {})
+        print(f"  Loaded {len(self.labels_data)} labeled questions")
+
+        # Print metadata
+        metadata = data.get("metadata", {})
+        print(f"  Generated: {metadata.get('generated_at', 'unknown')}")
+        print(f"  Model: {metadata.get('model', 'unknown')}")
+        print(f"  Avg best score: {metadata.get('avg_best_score', 0):.3f}")
+
+        # Print distribution
+        print("\n  Pipeline distribution:")
+        for key, count in data.get("pipeline_distribution", {}).items():
+            pct = count / len(self.labels_data) * 100
+            print(f"    {key}: {count} ({pct:.1f}%)")
+
+    def extract_features(self):
+        """Extract features from all labeled questions."""
+        print("\nExtracting features...")
+
+        questions = []
+        targets = []
+
+        for qid, label in self.labels_data.items():
+            question = label.get("question", "")
+            # Create composite target: pipeline_topk
+            target = f"{label['best_pipeline']}_k{label['best_top_k']}"
+            questions.append(question)
+            targets.append(target)
+
+        # Extract features
+        features_list = extract_features_batch(questions)
+        self.feature_names = list(features_list[0].keys())
+
+        # Convert to numpy array
+        self.X = np.array([list(f.values()) for f in features_list])
+        print(f"  Feature matrix shape: {self.X.shape}")
+        print(f"  Features: {len(self.feature_names)}")
+
+        # Encode targets
+        self.y = self.label_encoder.fit_transform(targets)
+        print(f"  Unique targets: {len(self.label_encoder.classes_)}")
+        for i, cls in enumerate(self.label_encoder.classes_):
+            count = np.sum(self.y == i)
+            pct = count / len(self.y) * 100
+            print(f"    {i}: {cls} ({count}, {pct:.1f}%)")
+
+    def train_and_evaluate(self, output_dir: str) -> Dict[str, Any]:
+        """Train models and evaluate with cross-validation.
+
+        Returns:
+            Dictionary with training results
+        """
+        print("\n" + "=" * 60)
+        print("TRAINING PIPELINE ROUTER")
+        print("=" * 60)
+
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "num_samples": len(self.y),
+            "num_features": len(self.feature_names),
+            "num_classes": len(self.label_encoder.classes_),
+            "classes": list(self.label_encoder.classes_),
+            "models": {},
+        }
+
+        # Standardize features
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(self.X)
+
+        # Define models to test
+        models = {
+            "random_forest": RandomForestClassifier(
+                n_estimators=100,
+                max_depth=10,
+                min_samples_split=5,
+                class_weight="balanced",
+                random_state=42,
+                n_jobs=-1,
+            ),
+            "gradient_boosting": GradientBoostingClassifier(
+                n_estimators=100,
+                max_depth=5,
+                learning_rate=0.1,
+                random_state=42,
+            ),
+            "logistic_regression": LogisticRegression(
+                max_iter=1000,
+                class_weight="balanced",
+                random_state=42,
+            ),
+        }
+
+        # Cross-validation
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+        best_model = None
+        best_score = 0
+        best_model_name = None
+
+        for name, model in models.items():
+            print(f"\n{name}:")
+
+            # Use scaled features for logistic regression, raw for tree-based
+            X_train = X_scaled if "logistic" in name else self.X
+
+            # Cross-validation
+            scores = cross_val_score(model, X_train, self.y, cv=cv, scoring="accuracy")
+            mean_score = scores.mean()
+            std_score = scores.std()
+
+            print(f"  CV Accuracy: {mean_score:.3f} (+/- {std_score:.3f})")
+
+            # Store results
+            results["models"][name] = {
+                "cv_accuracy_mean": float(mean_score),
+                "cv_accuracy_std": float(std_score),
+                "cv_scores": [float(s) for s in scores],
+            }
+
+            # Track best
+            if mean_score > best_score:
+                best_score = mean_score
+                best_model_name = name
+                best_model = model
+
+        print(f"\nBest model: {best_model_name} (accuracy: {best_score:.3f})")
+        results["best_model"] = best_model_name
+        results["best_accuracy"] = float(best_score)
+
+        # Train final model on full data
+        print("\nTraining final model on full dataset...")
+        X_final = X_scaled if "logistic" in best_model_name else self.X
+        best_model.fit(X_final, self.y)
+
+        # Get predictions for full dataset
+        y_pred = best_model.predict(X_final)
+        full_accuracy = np.mean(y_pred == self.y)
+        print(f"  Full training accuracy: {full_accuracy:.3f}")
+
+        # Classification report
+        print("\nClassification Report:")
+        report = classification_report(
+            self.y,
+            y_pred,
+            target_names=self.label_encoder.classes_,
+            output_dict=True,
+        )
+        print(classification_report(
+            self.y,
+            y_pred,
+            target_names=self.label_encoder.classes_,
+        ))
+        results["classification_report"] = report
+
+        # Feature importance (for tree-based models)
+        if hasattr(best_model, "feature_importances_"):
+            importances = best_model.feature_importances_
+            sorted_idx = np.argsort(importances)[::-1]
+
+            print("\nTop 10 Feature Importances:")
+            feature_importance = {}
+            for i in range(min(10, len(self.feature_names))):
+                idx = sorted_idx[i]
+                imp = importances[idx]
+                name = self.feature_names[idx]
+                print(f"  {name}: {imp:.3f}")
+                feature_importance[name] = float(imp)
+
+            results["feature_importance"] = feature_importance
+
+        # Save models
+        self._save_models(output_dir, best_model, scaler, results)
+
+        return results
+
+    def _save_models(
+        self,
+        output_dir: str,
+        model,
+        scaler: StandardScaler,
+        results: Dict[str, Any],
+    ):
+        """Save trained models and metadata."""
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Save model with correct name based on model type
+        model_suffix = results["best_model"].replace("_", "")[:2]  # rf, gb, or lr
+        model_file = output_path / f"router_{model_suffix}.joblib"
+        joblib.dump(model, model_file)
+        print(f"\nSaved model to: {model_file}")
+
+        # Save scaler
+        scaler_file = output_path / "scaler.joblib"
+        joblib.dump(scaler, scaler_file)
+        print(f"Saved scaler to: {scaler_file}")
+
+        # Save label encoder
+        encoder_file = output_path / "label_encoder.joblib"
+        joblib.dump(self.label_encoder, encoder_file)
+        print(f"Saved label encoder to: {encoder_file}")
+
+        # Save metadata
+        metadata = {
+            "model_type": results["best_model"],
+            "feature_names": self.feature_names,
+            "pipeline_classes": list(self.label_encoder.classes_),
+            "accuracy": results["best_accuracy"],
+            "trained_at": results["timestamp"],
+        }
+        metadata_file = output_path / "metadata.json"
+        with open(metadata_file, "w") as f:
+            json.dump(metadata, f, indent=2)
+        print(f"Saved metadata to: {metadata_file}")
+
+        # Save full training report
+        report_file = output_path / "training_report.json"
+        with open(report_file, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"Saved training report to: {report_file}")
+
+    def analyze_question_types(self):
+        """Analyze best pipelines by question type."""
+        print("\n" + "=" * 60)
+        print("ANALYSIS BY QUESTION TYPE")
+        print("=" * 60)
+
+        type_analysis = {}
+
+        for qid, label in self.labels_data.items():
+            qtype = label.get("question_type", "unknown")
+            if qtype not in type_analysis:
+                type_analysis[qtype] = {
+                    "count": 0,
+                    "pipelines": {},
+                    "scores": [],
+                }
+
+            type_analysis[qtype]["count"] += 1
+            type_analysis[qtype]["scores"].append(label["best_score"])
+
+            key = f"{label['best_pipeline']}_k{label['best_top_k']}"
+            type_analysis[qtype]["pipelines"][key] = (
+                type_analysis[qtype]["pipelines"].get(key, 0) + 1
+            )
+
+        for qtype, data in type_analysis.items():
+            print(f"\n{qtype} (n={data['count']}):")
+            avg_score = sum(data["scores"]) / len(data["scores"])
+            print(f"  Avg best score: {avg_score:.3f}")
+            print("  Pipeline distribution:")
+            for pipe, count in sorted(
+                data["pipelines"].items(), key=lambda x: -x[1]
+            ):
+                pct = count / data["count"] * 100
+                print(f"    {pipe}: {count} ({pct:.1f}%)")
+
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Train the meta-learning pipeline router"
+    )
+    parser.add_argument(
+        "--oracle-labels",
+        type=str,
+        default=DEFAULT_ORACLE_LABELS,
+        help=f"Path to oracle labels (default: {DEFAULT_ORACLE_LABELS})",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=DEFAULT_OUTPUT_DIR,
+        help=f"Output directory for models (default: {DEFAULT_OUTPUT_DIR})",
+    )
+    args = parser.parse_args()
+
+    # Resolve paths relative to project root
+    project_root = Path(__file__).parent.parent
+    oracle_path = str(project_root / args.oracle_labels)
+    output_dir = str(project_root / args.output_dir)
+
+    print("=" * 60)
+    print("ROUTER TRAINING")
+    print("=" * 60)
+    print(f"Oracle labels: {oracle_path}")
+    print(f"Output dir: {output_dir}")
+    print("=" * 60)
+
+    # Check if oracle labels exist
+    if not Path(oracle_path).exists():
+        print(f"\nERROR: Oracle labels not found at {oracle_path}")
+        print("Run 'python scripts/generate_oracle_labels.py' first")
+        sys.exit(1)
+
+    # Train router
+    trainer = RouterTrainer(oracle_path)
+    trainer.load_labels()
+    trainer.extract_features()
+    trainer.analyze_question_types()
+    results = trainer.train_and_evaluate(output_dir)
+
+    print("\n" + "=" * 60)
+    print("TRAINING COMPLETE")
+    print("=" * 60)
+    print(f"Best model: {results['best_model']}")
+    print(f"CV Accuracy: {results['best_accuracy']:.3f}")
+    print(f"\nModels saved to: {output_dir}/")
+
+
+if __name__ == "__main__":
+    main()

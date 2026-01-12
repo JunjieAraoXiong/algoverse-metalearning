@@ -18,8 +18,19 @@ class GoogleProvider(LLMProvider):
         max_tokens: int = 512,
         temperature: float = 0.0,
     ) -> LLMResponse:
+        import google.generativeai as genai
+        from google.generativeai.types import HarmCategory, HarmBlockThreshold
+
         # Gemini combines system and user prompts
         full_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+        # Lower safety settings for medical/scientific content
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        }
 
         response = self.client.generate_content(
             full_prompt,
@@ -27,6 +38,7 @@ class GoogleProvider(LLMProvider):
                 "max_output_tokens": max_tokens,
                 "temperature": temperature,
             },
+            safety_settings=safety_settings,
         )
 
         content = ""

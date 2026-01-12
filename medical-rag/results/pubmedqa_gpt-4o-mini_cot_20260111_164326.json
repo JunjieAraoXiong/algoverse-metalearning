@@ -1,0 +1,59 @@
+{
+  "model": "gpt-4o-mini",
+  "timestamp": "2026-01-11T16:43:26.841214",
+  "accuracy": 0.6666666666666666,
+  "correct": 2,
+  "total": 3,
+  "by_answer_type": {
+    "yes": {
+      "correct": 1,
+      "total": 2,
+      "accuracy": 0.5
+    },
+    "no": {
+      "correct": 1,
+      "total": 1,
+      "accuracy": 1.0
+    },
+    "maybe": {
+      "correct": 0,
+      "total": 0,
+      "accuracy": 0
+    }
+  },
+  "avg_generation_time_ms": 2072.2642739613852,
+  "temperature": 0.0,
+  "use_cot": true,
+  "results": [
+    {
+      "question_id": "PMQ0000",
+      "pubmed_id": 21645374,
+      "question": "Do mitochondria play a role in remodelling lace plant leaves during programmed cell death?",
+      "gold_answer": "yes",
+      "predicted_answer": "yes",
+      "correct": true,
+      "generation_time_ms": 2605.4201126098633,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0001",
+      "pubmed_id": 16418930,
+      "question": "Landolt C and snellen e acuity: differences in strabismus amblyopia?",
+      "gold_answer": "no",
+      "predicted_answer": "no",
+      "correct": true,
+      "generation_time_ms": 1540.4558181762695,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0002",
+      "pubmed_id": 9488747,
+      "question": "Syncope during bathing in infants, a pediatric form of water-induced urticaria?",
+      "gold_answer": "yes",
+      "predicted_answer": "maybe",
+      "correct": false,
+      "generation_time_ms": 2070.9168910980225,
+      "error": null
+    }
+  ]
+}

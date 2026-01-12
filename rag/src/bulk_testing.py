@@ -84,6 +84,7 @@ class BulkTestConfig:
     # Router settings (for pipeline_id="routed")
     router_classifier_model: str = DEFAULTS.router_classifier_model
     router_hyde_model: str = DEFAULTS.router_hyde_model
+    use_rule_router: bool = False  # Use free rule-based router instead of LLM
 
     # Runtime metadata
     timestamp: str = None
@@ -152,6 +153,7 @@ class BulkTestRunner:
                     classifier_model=self.config.router_classifier_model,
                     hyde_model=self.config.router_hyde_model,
                     reranker_model=self.config.reranker_model,
+                    use_rule_router=self.config.use_rule_router,
                 )
             else:
                 # Standard pipeline
@@ -478,6 +480,10 @@ def main():
         '--router-hyde-model', type=str, default=DEFAULTS.router_hyde_model,
         help=f'Model for HyDE generation in routed pipeline (default: {DEFAULTS.router_hyde_model})'
     )
+    parser.add_argument(
+        '--use-rule-router', action='store_true',
+        help='Use free rule-based router instead of LLM classifier (instant, no API cost)'
+    )
 
     args = parser.parse_args()
 
@@ -496,6 +502,7 @@ def main():
         judge_model=args.judge_model,
         router_classifier_model=args.router_classifier_model,
         router_hyde_model=args.router_hyde_model,
+        use_rule_router=args.use_rule_router,
     )
 
     # Handle chroma path - explicit override takes precedence

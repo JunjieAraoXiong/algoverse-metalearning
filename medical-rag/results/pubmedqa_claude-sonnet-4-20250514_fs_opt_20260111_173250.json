@@ -1,0 +1,134 @@
+{
+  "model": "claude-sonnet-4-20250514",
+  "timestamp": "2026-01-11T17:32:50.196952",
+  "accuracy": 0.4,
+  "correct": 4,
+  "total": 10,
+  "by_answer_type": {
+    "yes": {
+      "correct": 3,
+      "total": 5,
+      "accuracy": 0.6
+    },
+    "no": {
+      "correct": 1,
+      "total": 4,
+      "accuracy": 0.25
+    },
+    "maybe": {
+      "correct": 0,
+      "total": 1,
+      "accuracy": 0.0
+    }
+  },
+  "avg_generation_time_ms": 2061.0055446624756,
+  "temperature": 0.0,
+  "mode": "few-shot + optimized-prompt",
+  "use_cot": false,
+  "use_few_shot": true,
+  "use_optimized_prompt": true,
+  "use_self_consistency": false,
+  "n_samples": null,
+  "results": [
+    {
+      "question_id": "PMQ0000",
+      "pubmed_id": 21645374,
+      "question": "Do mitochondria play a role in remodelling lace plant leaves during programmed cell death?",
+      "gold_answer": "yes",
+      "predicted_answer": "yes",
+      "correct": true,
+      "generation_time_ms": 2406.5730571746826,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0001",
+      "pubmed_id": 16418930,
+      "question": "Landolt C and snellen e acuity: differences in strabismus amblyopia?",
+      "gold_answer": "no",
+      "predicted_answer": "maybe",
+      "correct": false,
+      "generation_time_ms": 1944.0891742706299,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0002",
+      "pubmed_id": 9488747,
+      "question": "Syncope during bathing in infants, a pediatric form of water-induced urticaria?",
+      "gold_answer": "yes",
+      "predicted_answer": "maybe",
+      "correct": false,
+      "generation_time_ms": 1897.9160785675049,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0003",
+      "pubmed_id": 17208539,
+      "question": "Are the long-term results of the transanal pull-through equal to those of the transabdominal pull-through?",
+      "gold_answer": "no",
+      "predicted_answer": "yes",
+      "correct": false,
+      "generation_time_ms": 1951.2839317321777,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0004",
+      "pubmed_id": 10808977,
+      "question": "Can tailored interventions increase mammography use among HMO women?",
+      "gold_answer": "yes",
+      "predicted_answer": "yes",
+      "correct": true,
+      "generation_time_ms": 2298.5401153564453,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0005",
+      "pubmed_id": 23831910,
+      "question": "Double balloon enteroscopy: is it efficacious and safe in a community setting?",
+      "gold_answer": "yes",
+      "predicted_answer": "maybe",
+      "correct": false,
+      "generation_time_ms": 1893.8391208648682,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0006",
+      "pubmed_id": 26037986,
+      "question": "30-Day and 1-year mortality in emergency general surgery laparotomies: an area of concern and need for improvement?",
+      "gold_answer": "maybe",
+      "predicted_answer": "yes",
+      "correct": false,
+      "generation_time_ms": 2143.3210372924805,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0007",
+      "pubmed_id": 26852225,
+      "question": "Is adjustment for reporting heterogeneity necessary in sleep disorders?",
+      "gold_answer": "no",
+      "predicted_answer": "maybe",
+      "correct": false,
+      "generation_time_ms": 2135.1308822631836,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0008",
+      "pubmed_id": 17113061,
+      "question": "Do mutations causing low HDL-C promote increased carotid intima-media thickness?",
+      "gold_answer": "no",
+      "predicted_answer": "no",
+      "correct": true,
+      "generation_time_ms": 1980.8359146118164,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0009",
+      "pubmed_id": 10966337,
+      "question": "A short stay or 23-hour ward in a general and academic children's hospital: are they effective?",
+      "gold_answer": "yes",
+      "predicted_answer": "yes",
+      "correct": true,
+      "generation_time_ms": 1958.5261344909668,
+      "error": null
+    }
+  ]
+}

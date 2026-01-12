@@ -1,14 +1,35 @@
 """Hybrid BM25 + semantic retriever builder."""
 
-from typing import Any, List
+from typing import Any, List, Tuple, Optional
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
+# Default ensemble weights: (BM25_weight, Semantic_weight)
+DEFAULT_ENSEMBLE_WEIGHTS = (0.5, 0.5)
 
-def build_hybrid_retriever(db: Chroma, top_k: int) -> Any:
-    """Create an ensemble of BM25 + semantic retrievers."""
+
+def build_hybrid_retriever(
+    db: Chroma,
+    top_k: int,
+    weights: Optional[Tuple[float, float]] = None
+) -> Any:
+    """Create an ensemble of BM25 + semantic retrievers.
+
+    Args:
+        db: ChromaDB instance
+        top_k: Number of documents to retrieve
+        weights: Tuple of (bm25_weight, semantic_weight). Defaults to (0.5, 0.5).
+                 Higher BM25 weight = better for exact keyword matches.
+                 Higher semantic weight = better for meaning-based similarity.
+
+    Returns:
+        EnsembleRetriever combining BM25 and semantic search
+    """
     from langchain_community.retrievers import BM25Retriever
-    from langchain.retrievers import EnsembleRetriever
+    from langchain_classic.retrievers.ensemble import EnsembleRetriever
+
+    if weights is None:
+        weights = DEFAULT_ENSEMBLE_WEIGHTS
 
     all_docs = db.get()
     from langchain_core.documents import Document as LCDocument
@@ -25,7 +46,7 @@ def build_hybrid_retriever(db: Chroma, top_k: int) -> Any:
 
     return EnsembleRetriever(
         retrievers=[bm25_retriever, semantic_retriever],
-        weights=[0.5, 0.5],
+        weights=list(weights),
     )
 
 

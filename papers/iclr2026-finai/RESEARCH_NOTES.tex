@@ -1,0 +1,3268 @@
+% ============================================================================
+% RESEARCH NOTES: Financial RAG with Meta-Learning
+% Author: Junjie Xiong
+% Project: ICLR 2026 FinAI Workshop
+%
+% This document contains detailed notes on all concepts, experiments,
+% decisions, and learnings from the research process.
+% ============================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+% Colors
+\definecolor{conceptblue}{RGB}{0, 84, 147}
+\definecolor{resultgreen}{RGB}{34, 139, 34}
+\definecolor{warningyellow}{RGB}{255, 193, 7}
+\definecolor{notegray}{RGB}{245, 245, 245}
+\definecolor{codebg}{RGB}{248, 248, 248}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=conceptblue,
+    citecolor=conceptblue,
+    urlcolor=conceptblue
+}
+
+% Code listings
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray!30}
+}
+
+% Custom boxes
+\newtcolorbox{conceptbox}[1]{
+    colback=conceptblue!5,
+    colframe=conceptblue,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{resultbox}[1]{
+    colback=resultgreen!5,
+    colframe=resultgreen,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{warningbox}[1]{
+    colback=warningyellow!10,
+    colframe=warningyellow!80!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{notebox}{
+    colback=notegray,
+    colframe=gray!50,
+    boxrule=0.5pt
+}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textit{Research Notes: Financial RAG}}
+\fancyhead[R]{\textit{Junjie Xiong}}
+\fancyfoot[C]{\thepage}
+
+% Section formatting
+\titleformat{\section}{\Large\bfseries\color{conceptblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+% ============================================================================
+\begin{document}
+
+% Title
+\begin{center}
+{\Huge\bfseries Research Notes}\\[0.5em]
+{\LARGE Table-Aware RAG \& Learned Routing for Financial QA}\\[1em]
+{\large Junjie Xiong}\\[0.5em]
+{\normalsize Last Updated: January 2026}\\[0.5em]
+{\normalsize Target: ICLR 2026 FinAI Workshop}
+\end{center}
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+% ============================================================================
+% EXECUTIVE SUMMARY
+% ============================================================================
+\section*{Executive Summary}
+
+\begin{resultbox}{TL;DR - What This Research Achieves}
+\textbf{Problem:} RAG systems fail on financial questions requiring table data (27\% accuracy).
+
+\textbf{Root Cause:} Standard PDF chunking fragments tables, destroying semantic structure.
+
+\textbf{Solution:} Two contributions:
+\begin{enumerate}
+    \item \textbf{Table-Aware Chunking} (Docling + TableFormer): Preserves tables as atomic units $\rightarrow$ \textbf{+94\% improvement on metrics questions}
+    \item \textbf{Learned Pipeline Router}: Predicts optimal retrieval strategy per question $\rightarrow$ \textbf{6$\times$ inference cost reduction}
+\end{enumerate}
+
+\textbf{Result:} 48.5\% $\rightarrow$ 60.4\% overall accuracy on FinanceBench (150 questions)
+\end{resultbox}
+
+\subsection*{Key Numbers to Remember}
+
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Metric} & \textbf{Before} & \textbf{After} \\
+\midrule
+Overall Accuracy & 48.5\% & \textbf{60.4\%} \\
+Metrics Questions & 26.7\% & \textbf{51.9\%} \\
+Table Structure Accuracy & N/A & \textbf{97.9\%} \\
+Inference Cost & 6$\times$ (run all) & \textbf{1$\times$} (routed) \\
+\bottomrule
+\end{tabular}
+
+% ============================================================================
+% READING PRIORITY GUIDE
+% ============================================================================
+\subsection*{Paper Reading Priority Guide}
+
+Read these papers in order of priority for your research:
+
+\begin{tabular}{@{}clp{6cm}c@{}}
+\toprule
+\textbf{Priority} & \textbf{Paper} & \textbf{Why You Need It} & \textbf{Time} \\
+\midrule
+\textcolor{red}{\textbf{P0}} & FinanceBench (2023) & Your benchmark - understand the task & 1 hr \\
+\textcolor{red}{\textbf{P0}} & TableFormer (CVPR 2022) & Core of your table handling & 2 hrs \\
+\textcolor{red}{\textbf{P0}} & Adaptive-RAG (NAACL 2024) & Closest related work to differentiate & 2 hrs \\
+\midrule
+\textcolor{orange}{\textbf{P1}} & RAG (NeurIPS 2020) & Foundational - establishes paradigm & 1.5 hrs \\
+\textcolor{orange}{\textbf{P1}} & Self-RAG (ICLR 2024) & Key alternative approach & 2 hrs \\
+\textcolor{orange}{\textbf{P1}} & MAML (ICML 2017) & Future work foundation & 2 hrs \\
+\midrule
+\textcolor{blue}{\textbf{P2}} & ProtoNets (NeurIPS 2017) & Simpler meta-learning alternative & 1 hr \\
+\textcolor{blue}{\textbf{P2}} & CRAG (2024) & Post-hoc correction approach & 1 hr \\
+\textcolor{blue}{\textbf{P2}} & RouteRAG (2025) & RL-based routing comparison & 1.5 hrs \\
+\midrule
+\textcolor{gray}{\textbf{P3}} & TAPAS, TURL & Table understanding background & 1 hr ea \\
+\textcolor{gray}{\textbf{P3}} & Surveys (Gao, Hospedales) & Broader context & 2 hrs ea \\
+\bottomrule
+\end{tabular}
+
+\vspace{1em}
+\textbf{Recommended Order:} FinanceBench $\rightarrow$ TableFormer $\rightarrow$ Adaptive-RAG $\rightarrow$ RAG $\rightarrow$ Self-RAG $\rightarrow$ MAML $\rightarrow$ Others as needed.
+
+\newpage
+
+% ============================================================================
+% GLOSSARY
+% ============================================================================
+\section*{Glossary of Key Terms}
+
+\begin{longtable}{@{}p{4cm}p{10cm}@{}}
+\toprule
+\textbf{Term} & \textbf{Definition} \\
+\midrule
+\endhead
+
+\textbf{RAG} & Retrieval-Augmented Generation. Combines LLM with external document retrieval to ground answers in evidence. \\
+\midrule
+
+\textbf{Chunking} & Process of splitting documents into smaller pieces for vector storage. Bad chunking = split tables = broken retrieval. \\
+\midrule
+
+\textbf{Embedding} & Dense vector representation of text. Similar texts have similar embeddings (high cosine similarity). \\
+\midrule
+
+\textbf{Top-k Retrieval} & Return the $k$ most similar chunks to a query based on embedding distance. \\
+\midrule
+
+\textbf{Semantic Search} & Retrieval based on meaning (embeddings) rather than exact keyword match. \\
+\midrule
+
+\textbf{BM25} & Classic keyword-based retrieval algorithm. Good for exact matches, bad for paraphrases. \\
+\midrule
+
+\textbf{Hybrid Retrieval} & Combines semantic (embedding) and lexical (BM25) retrieval. Usually via score fusion. \\
+\midrule
+
+\textbf{Reranking} & Second-stage scoring of retrieved documents using a more expensive model (cross-encoder). \\
+\midrule
+
+\textbf{Cross-Encoder} & Model that takes (query, document) pair and outputs relevance score. More accurate than bi-encoder but slower. \\
+\midrule
+
+\textbf{Oracle Labels} & Ground truth labels generated by running all options and picking the best. ``Cheating'' labels for training. \\
+\midrule
+
+\textbf{Meta-Learning} & Learning to learn. Training a model to quickly adapt to new tasks with few examples. \\
+\midrule
+
+\textbf{Few-Shot Learning} & Learning from very few examples (typically 1-20 per class). \\
+\midrule
+
+\textbf{Support Set} & In few-shot learning, the small labeled set used for adaptation. \\
+\midrule
+
+\textbf{Query Set} & In few-shot learning, the held-out set used to evaluate adapted model. \\
+\midrule
+
+\textbf{Prototype} & In ProtoNets, the mean embedding of all examples from a class. \\
+\midrule
+
+\textbf{Inner Loop} & In MAML, the task-specific adaptation step (gradient descent on support set). \\
+\midrule
+
+\textbf{Outer Loop} & In MAML, the meta-update step (update initialization based on post-adaptation performance). \\
+\midrule
+
+\textbf{FOMAML} & First-Order MAML. Ignores second-order gradients for faster training. \\
+\midrule
+
+\textbf{Reflection Tokens} & In Self-RAG, special tokens ([Retrieve], [IsRel], etc.) that guide generation. \\
+\midrule
+
+\textbf{Docling} & IBM's document processing tool. Uses TableFormer for table extraction. \\
+\midrule
+
+\textbf{TableFormer} & Transformer model for table structure recognition (97.9\% accuracy). \\
+\midrule
+
+\textbf{ChromaDB} & Open-source vector database for storing and querying embeddings. \\
+\midrule
+
+\textbf{FinanceBench} & Benchmark of 150 financial QA questions (50 metrics, 50 domain, 50 novel). \\
+\midrule
+
+\textbf{Metrics Questions} & Questions requiring numerical extraction from tables (hardest category). \\
+
+\bottomrule
+\end{longtable}
+
+\newpage
+
+% ============================================================================
+% KEY EQUATIONS REFERENCE
+% ============================================================================
+\section*{Key Equations Reference Card}
+
+\subsection*{RAG Fundamentals}
+
+\textbf{Cosine Similarity} (used in semantic retrieval):
+\begin{equation}
+\text{sim}(q, d) = \frac{q \cdot d}{||q|| \cdot ||d||}
+\end{equation}
+
+\textbf{BM25 Score} (keyword retrieval):
+\begin{equation}
+\text{BM25}(q, d) = \sum_{t \in q} \text{IDF}(t) \cdot \frac{f(t, d) \cdot (k_1 + 1)}{f(t, d) + k_1 \cdot (1 - b + b \cdot \frac{|d|}{\text{avgdl}})}
+\end{equation}
+
+\textbf{Hybrid Score Fusion}:
+\begin{equation}
+\text{score}(d) = \alpha \cdot \text{semantic}(d) + (1-\alpha) \cdot \text{BM25}(d)
+\end{equation}
+
+\subsection*{Meta-Learning (MAML)}
+
+\textbf{Inner Loop} (task adaptation):
+\begin{equation}
+\theta'_i = \theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(f_\theta)
+\end{equation}
+
+\textbf{Outer Loop} (meta-update):
+\begin{equation}
+\theta \leftarrow \theta - \beta \nabla_\theta \sum_{\mathcal{T}_i} \mathcal{L}_{\mathcal{T}_i}(f_{\theta'_i})
+\end{equation}
+
+\textbf{FOMAML Approximation}:
+\begin{equation}
+\nabla_\theta \mathcal{L}(f_{\theta'_i}) \approx \nabla_{\theta'_i} \mathcal{L}(f_{\theta'_i})
+\end{equation}
+
+\subsection*{Prototypical Networks}
+
+\textbf{Class Prototype}:
+\begin{equation}
+c_k = \frac{1}{|S_k|} \sum_{(x_i, y_i) \in S_k} f_\phi(x_i)
+\end{equation}
+
+\textbf{Classification Probability}:
+\begin{equation}
+p(y=k | x) = \frac{\exp(-||f_\phi(x) - c_k||^2)}{\sum_{k'} \exp(-||f_\phi(x) - c_{k'}||^2)}
+\end{equation}
+
+\subsection*{TableFormer Loss}
+
+\textbf{Combined Training Objective}:
+\begin{equation}
+\mathcal{L}_{total} = \mathcal{L}_{structure} + \lambda \mathcal{L}_{bbox}
+\end{equation}
+
+where $\mathcal{L}_{bbox} = \mathcal{L}_{L1} + \mathcal{L}_{GIoU}$
+
+\subsection*{Evaluation Metric}
+
+\textbf{Semantic Similarity} (our primary metric):
+\begin{equation}
+\text{score} = \frac{\text{embed}(\text{pred}) \cdot \text{embed}(\text{gold})}{||\text{embed}(\text{pred})|| \cdot ||\text{embed}(\text{gold})||}
+\end{equation}
+
+\newpage
+
+% ============================================================================
+% MASTER COMPARISON TABLE
+% ============================================================================
+\section*{Master Comparison: All RAG Approaches}
+
+\begin{longtable}{@{}p{2.2cm}p{2.5cm}p{3cm}p{2.5cm}p{3cm}@{}}
+\toprule
+\textbf{Method} & \textbf{Routing Signal} & \textbf{Training} & \textbf{LLM Changes} & \textbf{Key Limitation} \\
+\midrule
+\endhead
+
+\textbf{Na\"ive RAG} & None (fixed) & None & None & One-size-fits-all \\
+\midrule
+
+\textbf{Adaptive-RAG} & Query complexity & Auto-labels from performance & None & Misses domain-specific needs \\
+\midrule
+
+\textbf{Self-RAG} & Reflection tokens & Critic-generated data & Fine-tuning required & Expensive, model-specific \\
+\midrule
+
+\textbf{CRAG} & Post-hoc confidence & Fine-tuned T5 evaluator & None & Reactive, adds latency \\
+\midrule
+
+\textbf{RouteRAG} & RL policy & Reinforcement learning & Backbone LLM & Unstable training \\
+\midrule
+
+\rowcolor{resultgreen!20}
+\textbf{Ours} & Domain features (21) & Supervised (oracle labels) & \textbf{None} & Needs oracle generation \\
+
+\bottomrule
+\end{longtable}
+
+\vspace{1em}
+
+\begin{resultbox}{Why Our Approach Wins for Finance}
+\begin{enumerate}
+    \item \textbf{Domain-aware}: 21 features capture financial patterns (years, metrics, companies)
+    \item \textbf{Table-aware}: Docling + TableFormer preserves table structure (97.9\% accuracy)
+    \item \textbf{LLM-agnostic}: Works with any off-the-shelf model
+    \item \textbf{Stable training}: Supervised learning, no RL instability
+    \item \textbf{Interpretable}: Can inspect which features drive routing decisions
+\end{enumerate}
+\end{resultbox}
+
+\newpage
+
+\tableofcontents
+\newpage
+
+% ============================================================================
+% PART 1: PROJECT OVERVIEW
+% ============================================================================
+\part{Project Overview}
+
+\section{Research Goal}
+
+\begin{conceptbox}{The Central Question}
+Can we build a RAG system for financial documents that:
+\begin{enumerate}
+    \item Accurately extracts numerical data from tables
+    \item Automatically selects the best retrieval strategy per question
+    \item Generalizes across financial domains (and potentially other domains)
+\end{enumerate}
+\end{conceptbox}
+
+\subsection{Why This Matters}
+
+Financial AI assistants must answer precise questions like:
+\begin{itemize}
+    \item ``What was Apple's FY2023 operating margin?''
+    \item ``Calculate the year-over-year revenue growth for Microsoft.''
+    \item ``What risks does the company face related to supply chain?''
+\end{itemize}
+
+Current RAG systems fail badly on the first two types (numerical/table questions) because:
+\begin{enumerate}
+    \item \textbf{Tables get fragmented} during PDF chunking
+    \item \textbf{Static pipelines} don't adapt to question type
+    \item \textbf{No verification} catches hallucinated numbers
+\end{enumerate}
+
+\subsection{Two Contributions}
+
+\begin{resultbox}{Contribution 1: Table-Aware Chunking}
+Using Docling + TableFormer for PDF ingestion:
+\begin{itemize}
+    \item Tables preserved as atomic units (never split)
+    \item 97.9\% table structure recognition accuracy
+    \item Metrics questions: 27\% $\rightarrow$ 52\% (+94\% relative improvement)
+\end{itemize}
+\end{resultbox}
+
+\begin{resultbox}{Contribution 2: Learned Pipeline Routing}
+Training a classifier to predict optimal retrieval configuration:
+\begin{itemize}
+    \item 21 hand-crafted question features
+    \item Predicts best pipeline without running all options
+    \item 6$\times$ inference cost reduction
+\end{itemize}
+\end{resultbox}
+
+\subsection{Timeline \& Venue}
+
+\begin{itemize}
+    \item \textbf{Target:} ICLR 2026 Workshop on Financial AI
+    \item \textbf{Timeline:} 2+ weeks
+    \item \textbf{Environment:} Together AI GPU cluster (SLURM)
+\end{itemize}
+
+% ============================================================================
+% PART 2: BACKGROUND CONCEPTS
+% ============================================================================
+\newpage
+\part{Background Concepts}
+
+\section{Retrieval-Augmented Generation (RAG)}
+
+\subsection{What is RAG?}
+
+RAG combines two types of knowledge:
+\begin{enumerate}
+    \item \textbf{Parametric knowledge}: What the LLM learned during training (stored in weights)
+    \item \textbf{Non-parametric knowledge}: External documents retrieved at inference time
+\end{enumerate}
+
+\begin{conceptbox}{RAG Pipeline}
+\begin{verbatim}
+User Question
+     |
+     v
+[RETRIEVER] ---> Query vector database
+     |
+     v
+Retrieved Documents (context)
+     |
+     v
+[GENERATOR] ---> LLM generates answer using context
+     |
+     v
+Final Answer
+\end{verbatim}
+\end{conceptbox}
+
+\subsection{Why RAG?}
+
+\begin{itemize}
+    \item \textbf{Reduces hallucinations}: Answers grounded in retrieved evidence
+    \item \textbf{Updatable knowledge}: Change documents, not model weights
+    \item \textbf{Source citations}: Can point to where answer came from
+    \item \textbf{Domain adaptation}: Add domain documents without fine-tuning
+\end{itemize}
+
+\subsection{RAG Evolution}
+
+The field has evolved in stages:
+
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Stage} & \textbf{Approach} & \textbf{Limitation} \\
+\midrule
+Na\"ive RAG & Single retrieval, static $k$ & One-size-fits-all \\
+Advanced RAG & Better retrievers, reranking & Still static per query \\
+Adaptive RAG & Dynamic per-query decisions & \textbf{Current frontier} \\
+\bottomrule
+\end{tabular}
+
+\vspace{1em}
+\textbf{Our work is Adaptive RAG} -- we learn which strategy to use per question.
+
+% ============================================================================
+\section{Meta-Learning (Learning to Learn)}
+
+\subsection{Core Idea}
+
+\begin{conceptbox}{Meta-Learning vs Regular Learning}
+\textbf{Regular learning:} ``Learn to solve this specific task well.''
+
+\textbf{Meta-learning:} ``Learn to learn -- find a starting point that lets you quickly adapt to ANY new task.''
+\end{conceptbox}
+
+\subsection{Why It Matters for Our Project}
+
+Our router is doing meta-learning at the pipeline level:
+\begin{itemize}
+    \item It learns \textit{which tool to use}, not \textit{how to answer}
+    \item It generalizes patterns: ``questions with years + metrics $\rightarrow$ hybrid retrieval''
+    \item It could adapt to new domains with few examples (future work)
+\end{itemize}
+
+\subsection{MAML (Model-Agnostic Meta-Learning)}
+
+\subsubsection{The Algorithm}
+
+MAML (Finn et al., 2017) learns a good \textit{initialization} that can quickly adapt to new tasks:
+
+\begin{conceptbox}{MAML Two-Loop Structure}
+\begin{verbatim}
+OUTER LOOP (meta-learning):
+    For each iteration:
+        Sample batch of tasks {T1, T2, ..., Tn}
+
+        INNER LOOP (task adaptation):
+            For each task Ti:
+                1. Copy parameters: theta' = theta
+                2. Take k gradient steps on Ti's data
+                3. Evaluate adapted theta' on Ti's test data
+
+        META UPDATE:
+            Update theta based on adapted performance
+            theta = theta - beta * gradient(sum of losses)
+\end{verbatim}
+\end{conceptbox}
+
+\subsubsection{Visual Intuition}
+
+Imagine parameter space where different tasks have different optimal solutions:
+
+\begin{verbatim}
+                    Parameter Space
+
+        * Task A optimum
+
+                theta_0 (MAML initialization)
+               /|\
+              / | \
+             /  |  \     <-- just a few gradient steps!
+            v   v   v
+
+    * Task B    * Task C    * Task D
+    optimum     optimum     optimum
+\end{verbatim}
+
+MAML finds $\theta_0$ -- a central position from which you can quickly reach any task's optimum.
+
+\subsubsection{Why ``Model-Agnostic''?}
+
+MAML works with ANY model trained with gradient descent:
+\begin{itemize}
+    \item Neural networks
+    \item CNNs for images
+    \item Transformers for NLP
+    \item Our pipeline router
+\end{itemize}
+
+\subsubsection{MAML for Our Router (Future Work)}
+
+\textbf{Tasks = Different domains:}
+\begin{itemize}
+    \item Task 1: Finance questions (FinanceBench)
+    \item Task 2: Medical questions (PubMedQA)
+    \item Task 3: Legal questions (CUAD)
+\end{itemize}
+
+\textbf{Goal:} Learn router initialization that quickly adapts to any domain.
+
+\begin{lstlisting}[language=Python]
+# Meta-training
+tasks = [FinanceRouterTask, MedicalRouterTask, LegalRouterTask]
+theta_maml = maml_train(router_model, tasks)
+
+# At deployment: New domain (e.g., Scientific papers)
+new_task = ScientificRouterTask(support_size=20)  # Only 20 examples!
+
+# Quick adaptation (just 5 gradient steps)
+theta_adapted = theta_maml
+for step in range(5):
+    loss = compute_loss(theta_adapted, new_task.support)
+    theta_adapted = theta_adapted - alpha * gradient(loss)
+
+# Now router works for scientific domain!
+\end{lstlisting}
+
+\subsection{Prototypical Networks}
+
+Alternative to MAML that's simpler (no inner loop):
+
+\begin{conceptbox}{ProtoNets Idea}
+\begin{enumerate}
+    \item Learn an embedding space where similar items cluster together
+    \item For each class, compute ``prototype'' = mean of class embeddings
+    \item At inference: classify by nearest prototype
+\end{enumerate}
+\end{conceptbox}
+
+For our router, this could mean:
+\begin{lstlisting}[language=Python]
+# Compute prototype for each pipeline
+prototypes = {
+    "semantic_k5": mean(embeddings where semantic_k5 won),
+    "hybrid_k10": mean(embeddings where hybrid_k10 won),
+    ...
+}
+
+# Route by nearest prototype
+def route(question):
+    q_embed = embed(question)
+    return argmin(distance(q_embed, proto) for proto in prototypes)
+\end{lstlisting}
+
+\subsection{Comparison of Meta-Learning Approaches}
+
+\begin{longtable}{@{}p{3cm}p{4cm}p{4cm}p{3cm}@{}}
+\toprule
+\textbf{Approach} & \textbf{What It Learns} & \textbf{Test Time Requirement} & \textbf{Complexity} \\
+\midrule
+\endhead
+Regular Training & Task-specific params & Full retraining for new task & Low \\
+Transfer Learning & Pretrained features & Fine-tuning (100s examples) & Medium \\
+MAML & Optimal initialization & Few-shot adaptation (5-20 ex) & High \\
+ProtoNets & Metric space & Just class prototypes & Medium \\
+In-Context (GPT-3) & Implicit from pretraining & Examples in prompt & Low \\
+\bottomrule
+\end{longtable}
+
+% ============================================================================
+\section{The Three Scripts We Created}
+
+\subsection{Script 1: generate\_oracle\_labels.py}
+
+\subsubsection{Purpose}
+Runs EVERY question through EVERY pipeline configuration and records which one worked best.
+
+\subsubsection{What It Does}
+
+\begin{lstlisting}[language=Python]
+Question: "What was Apple's revenue in FY2023?"
+
+Pipeline Results:
+  semantic_k5:              0.72 similarity
+  semantic_k10:             0.75 similarity
+  semantic_k20:             0.74 similarity
+  hybrid_filter_rerank_k5:  0.81 similarity  <- BEST
+  hybrid_filter_rerank_k10: 0.79 similarity
+  hybrid_filter_rerank_k20: 0.78 similarity
+
+Oracle Label: hybrid_filter_rerank, k=5
+\end{lstlisting}
+
+\subsubsection{Why It Matters}
+
+This creates \textbf{ground truth} for training. Without knowing which pipeline \textit{actually} works best for each question, we can't train a router to predict it.
+
+\begin{warningbox}{Key Insight}
+Oracle labels are ``cheating'' labels -- they require running all pipelines (expensive). The goal is to train a model that predicts these labels \textit{without} running all pipelines, using only the question text.
+\end{warningbox}
+
+\subsubsection{Output Format}
+
+\begin{lstlisting}[language=Python]
+# data/oracle_labels.json
+{
+    "question_id": {
+        "question": "...",
+        "question_type": "metrics-generated",
+        "best_pipeline": "hybrid_filter_rerank",
+        "best_top_k": 10,
+        "best_score": 0.87,
+        "all_scores": {"semantic_5": 0.72, "hybrid_10": 0.87, ...}
+    }
+}
+\end{lstlisting}
+
+\subsection{Script 2: train\_router.py}
+
+\subsubsection{Purpose}
+Trains a classifier to predict the best pipeline from question features alone (no retrieval needed).
+
+\subsubsection{The 21 Features}
+
+\begin{longtable}{@{}p{2cm}p{4cm}p{6cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Feature} & \textbf{Intuition} \\
+\midrule
+\endhead
+\multirow{4}{*}{Temporal}
+    & has\_year & Question references specific year \\
+    & has\_quarter & References Q1-Q4 \\
+    & has\_fiscal\_indicator & Contains ``FY'' or ``fiscal'' \\
+    & year\_count & How many years mentioned \\
+\midrule
+\multirow{3}{*}{Entity}
+    & has\_company\_indicator & Company name present \\
+    & capitalized\_word\_count & Potential named entities \\
+    & has\_metric\_name & Revenue, EBITDA, etc. \\
+\midrule
+\multirow{6}{*}{Structure}
+    & is\_what & Starts with ``What'' \\
+    & is\_how & Starts with ``How'' \\
+    & is\_why & Starts with ``Why'' \\
+    & is\_yes\_no & Binary answer expected \\
+    & expects\_number & Numerical output expected \\
+    & expects\_explanation & Explanation needed \\
+\midrule
+\multirow{3}{*}{Stats}
+    & word\_count & Total words \\
+    & char\_count & Total characters \\
+    & avg\_word\_length & Average word length \\
+\midrule
+\multirow{3}{*}{Domain}
+    & finance\_density & Financial keyword density \\
+    & medical\_density & Medical keyword density \\
+    & legal\_density & Legal keyword density \\
+\midrule
+\multirow{2}{*}{Complexity}
+    & needs\_reasoning & Multi-step logic required \\
+    & multi\_part\_question & Multiple sub-questions \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{Training Process}
+
+\begin{enumerate}
+    \item Load oracle labels from JSON
+    \item Extract 21 features for all 150 questions
+    \item Train sklearn classifier (RandomForest or XGBoost)
+    \item 5-fold cross-validation
+    \item Save model to \texttt{models/pipeline\_router.pkl}
+\end{enumerate}
+
+\subsubsection{Why This Matters}
+
+\begin{resultbox}{Inference Speedup}
+\textbf{Before (naive):} Run all 6 pipelines $\rightarrow$ Pick best $\rightarrow$ 6$\times$ cost
+
+\textbf{After (learned):} Extract features $\rightarrow$ Predict best $\rightarrow$ 1$\times$ cost
+\end{resultbox}
+
+\subsection{Script 3: error\_analysis.py}
+
+\subsubsection{Purpose}
+Analyzes questions where the system still fails and categorizes them.
+
+\subsubsection{Error Categories}
+
+\begin{tabular}{@{}p{3cm}p{4cm}p{5cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Description} & \textbf{Example} \\
+\midrule
+Missing Table & Table not in any chunk & Revenue table fragmented \\
+Wrong Period & Retrieved wrong year/quarter & Got 2022 instead of 2023 \\
+Wrong Company & Retrieved different company & Mixed up Apple/Microsoft \\
+Calculation Error & LLM math wrong & Computed ratio incorrectly \\
+Format Mismatch & Answer format differs & ``\$1.2B'' vs ``1200 million'' \\
+Hallucination & Number not in context & Made up a value \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Why This Matters}
+
+\begin{enumerate}
+    \item \textbf{For the paper}: Analysis section needs this -- reviewers want to know WHY you're still at 60\% instead of 100\%
+    \item \textbf{For future work}: Identifies what to fix next
+\end{enumerate}
+
+\subsection{How The Three Scripts Connect}
+
+\begin{verbatim}
++-------------------------------------------------------------+
+|                    TRAINING PHASE                           |
+|                                                             |
+|   FinanceBench        generate_oracle        train_router   |
+|   150 questions  ---> labels.py         ---> .py           |
+|                       (900 API calls)        (5-fold CV)    |
+|                              |                    |         |
+|                              v                    v         |
+|                    oracle_labels.json    router_rf.joblib   |
++-------------------------------------------------------------+
+
++-------------------------------------------------------------+
+|                    INFERENCE PHASE                          |
+|                                                             |
+|   New Question --> Extract 21 --> Router --> Best Pipeline  |
+|                    Features       Predicts    (1 API call)  |
+|                    (<1ms)         (<1ms)                    |
++-------------------------------------------------------------+
+
++-------------------------------------------------------------+
+|                    ANALYSIS PHASE                           |
+|                                                             |
+|   Evaluation     error_analysis    docs/error_analysis.md   |
+|   Results    --> .py          --> (for paper section)       |
++-------------------------------------------------------------+
+\end{verbatim}
+
+% ============================================================================
+% PART 3: EXPERIMENT RESULTS
+% ============================================================================
+\newpage
+\part{Experiment Results}
+
+\section{The Breakthrough Finding}
+
+\begin{resultbox}{Key Discovery - January 10, 2026}
+\textbf{Table handling was the bottleneck, NOT the model!}
+
+\begin{itemize}
+    \item Old chunking (PyPDF): 28\% metrics
+    \item New chunking (Docling): \textbf{52\% metrics} (+94\% improvement!)
+    \item Overall: 48.5\% $\rightarrow$ \textbf{60.4\%} (+24\% improvement!)
+\end{itemize}
+\end{resultbox}
+
+\section{Complete Results History}
+
+\subsection{Baseline Experiments (PyPDF Chunking)}
+
+\subsubsection{Run 1: Initial Baseline}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Configuration} & \textbf{Value} \\
+\midrule
+Date & 2026-01-09 22:25 \\
+Model & Llama 3.1 70B Turbo \\
+Pipeline & Semantic \\
+Top-k & 10 \\
+Embeddings & OpenAI text-embedding-3-large \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+\textbf{Results:}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Metric} & \textbf{Score} \\
+\midrule
+Overall & 0.485 (48.5\%) \\
+Domain-relevant (n=50) & 0.628 (62.8\%) \\
+Novel-generated (n=50) & 0.560 (56.0\%) \\
+Metrics-generated (n=50) & 0.267 (26.7\%) \\
+Error Rate & 0.00\% \\
+Retrieval Latency & 340ms \\
+\bottomrule
+\end{tabular}
+
+\textbf{Observations:}
+\begin{itemize}
+    \item Pipeline is stable (0\% errors)
+    \item Domain-relevant questions perform well (62.8\%)
+    \item \textbf{Metrics-generated questions are broken (26.7\%)} -- need precise table extraction
+\end{itemize}
+
+\subsection{Top-k Ablation}
+
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Top-k} & \textbf{Overall} & \textbf{Domain} & \textbf{Novel} & \textbf{Metrics} & \textbf{$\Delta$ vs k=10} \\
+\midrule
+10 & 0.485 & 0.628 & 0.560 & 0.267 & -- \\
+15 & 0.486 & 0.634 & 0.557 & 0.267 & +0.1\% \\
+20 & 0.489 & 0.639 & 0.558 & 0.270 & +0.8\% \\
+30 & 0.493 & 0.637 & 0.565 & 0.275 & +1.6\% \\
+\bottomrule
+\end{tabular}
+
+\begin{warningbox}{Learning}
+More context helps slightly, but diminishing returns. k=10 $\rightarrow$ k=30 = only +1.6\%.
+\end{warningbox}
+
+\subsection{Pipeline Ablation}
+
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Pipeline} & \textbf{Overall} & \textbf{Metrics} & \textbf{Latency} & \textbf{$\Delta$} \\
+\midrule
+Semantic k=10 & 0.485 & 0.267 & 340ms & -- \\
+Hybrid k=10 & 0.491 & 0.271 & 3330ms & +1.2\% \\
+Hybrid k=20 & 0.496 & 0.278 & 2646ms & +2.3\% \\
+\bottomrule
+\end{tabular}
+
+\begin{warningbox}{Learning}
+Reranking helps slightly (+2.3\%) but is 8-10$\times$ slower.
+\end{warningbox}
+
+\subsection{Model Ablation}
+
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Overall} & \textbf{Domain} & \textbf{Novel} & \textbf{Metrics} \\
+\midrule
+Llama 3.1 70B & 0.485 & 0.628 & 0.560 & 0.267 \\
+Llama 3.3 70B & 0.477 & 0.621 & 0.550 & 0.260 \\
+Qwen 2.5 72B & 0.491 & 0.635 & 0.562 & 0.275 \\
+GPT-4o-mini & 0.490 & 0.632 & 0.560 & 0.279 \\
+\midrule
+\textit{Std. Dev.} & 0.006 & 0.006 & 0.005 & 0.008 \\
+\bottomrule
+\end{tabular}
+
+\begin{resultbox}{Critical Insight}
+\textbf{All models hit the same $\sim$28\% ceiling on metrics questions.}
+
+This proves the bottleneck is in retrieval/chunking, NOT the LLM. Switching models doesn't solve the table extraction problem.
+\end{resultbox}
+
+\subsection{Final Leaderboard (Pre-Docling)}
+
+\begin{tabular}{@{}clcc@{}}
+\toprule
+\textbf{Rank} & \textbf{Configuration} & \textbf{Overall} & \textbf{Metrics} \\
+\midrule
+1 & Hybrid k=20 + Llama 3.1 & 0.496 & 0.278 \\
+2 & Semantic k=30 + Llama 3.1 & 0.493 & 0.275 \\
+3 & Semantic k=10 + Qwen 2.5 & 0.491 & 0.275 \\
+4 & Hybrid k=10 + Llama 3.1 & 0.491 & 0.271 \\
+5 & Semantic k=10 + GPT-4o-mini & 0.490 & 0.279 \\
+6 & Semantic k=20 + Llama 3.1 & 0.489 & 0.270 \\
+7 & Semantic k=15 + Llama 3.1 & 0.486 & 0.267 \\
+8 & Semantic k=10 + Llama 3.1 & 0.485 & 0.267 \\
+9 & Semantic k=10 + Llama 3.3 & 0.477 & 0.260 \\
+\bottomrule
+\end{tabular}
+
+\subsection{Docling + TableFormer Results (Breakthrough)}
+
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Configuration} & \textbf{Overall} & \textbf{Metrics} & \textbf{Domain} & \textbf{Novel} \\
+\midrule
+PyPDF + Llama 70B (k=10) & 0.485 & 0.267 & 0.628 & 0.560 \\
+PyPDF + Llama 70B (k=20) & 0.489 & 0.270 & 0.639 & 0.558 \\
+\rowcolor{resultgreen!20}
+\textbf{Docling + GPT-4o-mini (k=5)} & \textbf{0.604} & \textbf{0.519} & \textbf{0.689} & \textbf{0.604} \\
+\bottomrule
+\end{tabular}
+
+\subsection{Improvement Analysis}
+
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Metric} & \textbf{Old} & \textbf{New} & \textbf{Absolute $\Delta$} & \textbf{Relative $\Delta$} \\
+\midrule
+Overall & 0.485 & 0.604 & +0.119 & \textbf{+24.5\%} \\
+Metrics-generated & 0.267 & 0.519 & +0.252 & \textbf{+94.4\%} \\
+Domain-relevant & 0.628 & 0.689 & +0.061 & +9.7\% \\
+Novel-generated & 0.560 & 0.604 & +0.044 & +7.9\% \\
+\bottomrule
+\end{tabular}
+
+\subsection{Docling Ingestion Statistics}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+PDFs Processed & 265/265 (100\%) \\
+Total Chunks & 89,566 \\
+Table Accuracy & 97.9\% (TableFormer) \\
+ChromaDB Location & chroma\_docling/ \\
+\bottomrule
+\end{tabular}
+
+% ============================================================================
+% PART 4: RELATED WORK - COMPREHENSIVE LITERATURE REVIEW
+% ============================================================================
+\newpage
+\part{Related Work \& Literature}
+
+This part provides detailed summaries of all key papers relevant to our research. Reading these papers is essential for understanding the research landscape.
+
+% ----------------------------------------------------------------------------
+\section{Foundational Papers}
+% ----------------------------------------------------------------------------
+
+\subsection{RAG: Retrieval-Augmented Generation (Lewis et al., 2020)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks\\
+\textbf{Authors:} Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, et al.\\
+\textbf{Venue:} NeurIPS 2020\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2005.11401}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+This is the foundational paper that established the RAG paradigm. The key insight is to combine \textbf{parametric memory} (LLM weights) with \textbf{non-parametric memory} (retrieved documents).
+
+\subsubsection{Technical Approach}
+
+RAG combines a pre-trained seq2seq model with a neural retriever:
+\begin{enumerate}
+    \item \textbf{Retriever:} Dense Passage Retrieval (DPR) to find relevant documents
+    \item \textbf{Generator:} BART fine-tuned to generate answers conditioned on retrieved docs
+\end{enumerate}
+
+Two formulations are compared:
+\begin{itemize}
+    \item \textbf{RAG-Sequence:} Same documents for entire generation
+    \item \textbf{RAG-Token:} Can use different documents per generated token
+\end{itemize}
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item State-of-the-art on 3 open-domain QA tasks
+    \item RAG generates more specific, diverse, and factual language than parametric-only models
+    \item Outperforms task-specific retrieve-and-extract architectures
+\end{itemize}
+
+\subsubsection{Why It Matters for Us}
+
+This paper established the paradigm we're building on. Every RAG system since, including ours, follows this basic structure of retrieve-then-generate. Our contribution is making the retrieval step adaptive rather than fixed.
+
+% ----------------------------------------------------------------------------
+\subsection{MAML: Model-Agnostic Meta-Learning (Finn et al., 2017)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks\\
+\textbf{Authors:} Chelsea Finn, Pieter Abbeel, Sergey Levine\\
+\textbf{Venue:} ICML 2017\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/1703.03400}\\
+\textbf{Code:} \url{https://github.com/cbfinn/maml}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+MAML proposes an algorithm for meta-learning that is \textbf{model-agnostic} -- it works with any model trained with gradient descent. The key idea is to learn an \textbf{initialization} from which the model can quickly adapt to new tasks.
+
+\subsubsection{Technical Approach}
+
+The algorithm has a distinctive \textbf{bi-level optimization}:
+
+\textbf{Inner Loop (Task Adaptation):}
+\begin{equation}
+\theta'_i = \theta - \alpha \nabla_\theta \mathcal{L}_{T_i}(f_\theta)
+\end{equation}
+
+\textbf{Outer Loop (Meta-Update):}
+\begin{equation}
+\theta \leftarrow \theta - \beta \nabla_\theta \sum_{T_i \sim p(\mathcal{T})} \mathcal{L}_{T_i}(f_{\theta'_i})
+\end{equation}
+
+The crucial insight is that the outer loop optimizes for \textbf{post-adaptation performance}, not initial performance. This trains the model to be easy to fine-tune.
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item State-of-the-art on Omniglot (1-shot: 98.7\%, 5-shot: 99.9\%)
+    \item Strong results on Mini-ImageNet few-shot classification
+    \item Works for classification, regression, AND reinforcement learning
+\end{itemize}
+
+\subsubsection{Why It Matters for Us}
+
+MAML provides the theoretical foundation for training our router to generalize across domains. In future work, we could use MAML to train a router that:
+\begin{itemize}
+    \item Pre-trains on Finance, Medical, Legal domains
+    \item Quickly adapts to new domains (e.g., Scientific) with only 20 examples
+\end{itemize}
+
+% ----------------------------------------------------------------------------
+\subsection{Prototypical Networks (Snell et al., 2017)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Prototypical Networks for Few-shot Learning\\
+\textbf{Authors:} Jake Snell, Kevin Swersky, Richard S. Zemel\\
+\textbf{Venue:} NeurIPS 2017\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/1703.05175}\\
+\textbf{Code:} \url{https://github.com/jakesnell/prototypical-networks}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+ProtoNets propose a simpler alternative to MAML: learn a \textbf{metric space} where classification is done by finding the \textbf{nearest class prototype} (mean of support examples).
+
+\subsubsection{Technical Approach}
+
+\begin{enumerate}
+    \item \textbf{Embed} all support examples using a neural network $f_\phi$
+    \item \textbf{Compute prototypes}: $c_k = \frac{1}{|S_k|} \sum_{(x_i, y_i) \in S_k} f_\phi(x_i)$
+    \item \textbf{Classify} query by nearest prototype (Euclidean distance)
+\end{enumerate}
+
+\subsubsection{Key Finding: Distance Function Matters}
+
+\begin{warningbox}{Critical Insight}
+\textbf{Euclidean distance significantly outperforms cosine similarity!}
+
+This is counterintuitive since most NLP work uses cosine similarity for embeddings. The paper shows that for few-shot classification, Euclidean distance in the learned space works better.
+\end{warningbox}
+
+\subsubsection{Why It Matters for Us}
+
+For our router, ProtoNets provide a simpler baseline than MAML:
+\begin{lstlisting}[language=Python]
+# Router as ProtoNet
+prototypes = {
+    "semantic_k5": mean(embeddings where semantic_k5 won),
+    "hybrid_k10": mean(embeddings where hybrid_k10 won),
+    ...
+}
+
+def route(question):
+    q_embed = embed(question)
+    return argmin(euclidean(q_embed, proto) for proto in prototypes)
+\end{lstlisting}
+
+% ----------------------------------------------------------------------------
+\subsection{Meta-Learning Survey (Hospedales et al., 2021)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Meta-Learning in Neural Networks: A Survey\\
+\textbf{Authors:} Timothy Hospedales, Antreas Antoniou, Paul Micaelli, Amos Storkey\\
+\textbf{Venue:} IEEE TPAMI 2022 (arXiv 2020)\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2004.05439}
+\end{conceptbox}
+
+\subsubsection{Key Taxonomy}
+
+The survey proposes a comprehensive taxonomy:
+
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Examples} \\
+\midrule
+Metric-based & ProtoNets, Matching Networks, Relation Networks \\
+Optimization-based & MAML, Reptile, Meta-SGD \\
+Model-based & MANN, Neural Turing Machines \\
+Black-box & Hypernetworks, learned optimizers \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Applications Covered}
+
+\begin{itemize}
+    \item Few-shot learning
+    \item Reinforcement learning
+    \item Neural architecture search
+    \item Hyperparameter optimization
+    \item Continual learning
+\end{itemize}
+
+\subsubsection{Why It Matters for Us}
+
+This survey provides the background context for positioning our work. Our router combines elements of:
+\begin{itemize}
+    \item \textbf{Metric-based} (learned features for routing)
+    \item \textbf{Optimization-based} (potential MAML extension)
+\end{itemize}
+
+% ----------------------------------------------------------------------------
+\section{Adaptive RAG Papers}
+% ----------------------------------------------------------------------------
+
+\subsection{Adaptive-RAG (Jeong et al., 2024)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity\\
+\textbf{Authors:} Soyeong Jeong, Jinheon Baek, Sukmin Cho, Sung Ju Hwang, Jong Park\\
+\textbf{Venue:} NAACL 2024 (pages 7036-7050)\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2403.14403}\\
+\textbf{Code:} \url{https://github.com/starsuzi/Adaptive-RAG}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+Adaptive-RAG introduces a \textbf{query-complexity classifier} that routes questions to one of three strategies:
+
+\begin{enumerate}
+    \item \textbf{No retrieval} -- Simple facts the LLM already knows
+    \item \textbf{Single-step retrieval} -- Standard RAG for moderate queries
+    \item \textbf{Iterative/multi-step retrieval} -- Complex multi-hop questions
+\end{enumerate}
+
+\subsubsection{Technical Approach}
+
+\begin{itemize}
+    \item \textbf{Classifier:} Small LM trained to predict complexity
+    \item \textbf{Labels:} Automatically generated from model performance on different strategies
+    \item \textbf{Training signal:} If no-retrieval beats retrieval, label = ``simple''
+\end{itemize}
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item Outperforms static single-step and iterative baselines
+    \item Reduces unnecessary retrieval for simple queries
+    \item Improves accuracy on complex multi-hop queries
+\end{itemize}
+
+\subsubsection{How We Differ}
+
+\begin{resultbox}{Our Differentiation}
+\textbf{Adaptive-RAG routes by complexity}; \textbf{we route by domain-specific features}.
+
+A ``simple'' revenue question still needs table retrieval -- complexity alone misses this. Our 21 features capture:
+\begin{itemize}
+    \item Temporal signals (has\_year, has\_quarter)
+    \item Financial signals (has\_metric\_name, finance\_density)
+    \item Structure (expects\_number, needs\_reasoning)
+\end{itemize}
+\end{resultbox}
+
+% ----------------------------------------------------------------------------
+\subsection{Self-RAG (Asai et al., 2023)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection\\
+\textbf{Authors:} Akari Asai, Zeqiu Wu, Yizhong Wang, Avirup Sil, Hannaneh Hajishirzi\\
+\textbf{Venue:} ICLR 2024 (Oral presentation, top 1\%)\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2310.11511}\\
+\textbf{Code:} \url{https://github.com/AkariAsai/self-rag}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+Self-RAG trains an LM to generate text with special \textbf{reflection tokens}:
+\begin{itemize}
+    \item \texttt{[Retrieve]} -- Should I retrieve now?
+    \item \texttt{[IsRel]} -- Is retrieved document relevant?
+    \item \texttt{[IsSup]} -- Is generation supported by evidence?
+    \item \texttt{[IsUse]} -- Is response useful?
+\end{itemize}
+
+\subsubsection{Technical Approach}
+
+\begin{enumerate}
+    \item Train a \textbf{critic model} to insert reflection tokens into training data
+    \item Fine-tune LM on this data to generate tokens + reflections
+    \item At inference, model decides when to retrieve and self-critiques
+\end{enumerate}
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item Outperforms ChatGPT on Open-domain QA, reasoning, and fact verification
+    \item 7B and 13B versions beat retrieval-augmented Llama2-chat
+    \item Significant gains in factuality and citation accuracy
+\end{itemize}
+
+\subsubsection{How We Differ}
+
+\begin{warningbox}{Key Difference}
+\textbf{Self-RAG modifies the LLM}; \textbf{we keep the LLM unchanged}.
+
+Self-RAG requires fine-tuning the generator to emit reflection tokens. Our approach:
+\begin{itemize}
+    \item Uses any off-the-shelf LLM
+    \item Routes at the pipeline level before generation
+    \item No additional token vocabulary or training
+\end{itemize}
+\end{warningbox}
+
+% ----------------------------------------------------------------------------
+\subsection{CRAG: Corrective RAG (Yan et al., 2024)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Corrective Retrieval Augmented Generation\\
+\textbf{Authors:} Shi-Qi Yan, Jia-Chen Gu, Yun Zhu, Zhen-Hua Ling\\
+\textbf{Venue:} arXiv 2024\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2401.15884}\\
+\textbf{Code:} \url{https://github.com/HuskyInSalt/CRAG}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+CRAG evaluates retrieval quality \textbf{post-hoc} and takes corrective actions when confidence is low:
+
+\begin{enumerate}
+    \item \textbf{Correct} -- High confidence, use retrieved docs directly
+    \item \textbf{Incorrect} -- Low confidence, fall back to web search
+    \item \textbf{Ambiguous} -- Medium confidence, combine both sources
+\end{enumerate}
+
+\subsubsection{Technical Approach}
+
+\begin{itemize}
+    \item \textbf{Retrieval Evaluator:} Fine-tuned T5-large (0.77B params) -- much lighter than Self-RAG's critic
+    \item \textbf{Knowledge Refinement:} Decompose-then-recompose algorithm to filter irrelevant info
+    \item \textbf{Web Augmentation:} Uses large-scale web search as fallback
+\end{itemize}
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item Significantly improves upon standard RAG
+    \item Outperforms Self-RAG on PopQA, Biography, Pub Health, Arc-Challenge
+    \item \textbf{Plug-and-play}: Can be added to any RAG system
+\end{itemize}
+
+\subsubsection{How We Differ}
+
+\begin{resultbox}{Our Differentiation}
+\textbf{CRAG corrects bad retrievals after they happen}; \textbf{we prevent them by choosing the right pipeline upfront}.
+
+CRAG's approach:
+\begin{itemize}
+    \item Retrieve $\rightarrow$ Evaluate $\rightarrow$ Correct (if needed)
+    \item Adds latency with post-hoc evaluation
+    \item Web search fallback may not help domain-specific questions
+\end{itemize}
+
+Our approach:
+\begin{itemize}
+    \item Analyze question $\rightarrow$ Route to best pipeline $\rightarrow$ Retrieve once
+    \item No post-hoc correction needed
+    \item Domain-specific features ensure right strategy from start
+\end{itemize}
+\end{resultbox}
+
+% ----------------------------------------------------------------------------
+\subsection{RouteRAG (Guo et al., 2025)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} RouteRAG: Efficient Retrieval-Augmented Generation from Text and Graph via Reinforcement Learning\\
+\textbf{Authors:} Yucan Guo, Miao Su, Saiping Guan, Zihao Sun, Xiaolong Jin, Jiafeng Guo, Xueqi Cheng\\
+\textbf{Venue:} arXiv December 2025\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2512.09487}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+RouteRAG uses \textbf{reinforcement learning} to route between:
+\begin{itemize}
+    \item Text corpus retrieval
+    \item Knowledge graph retrieval
+    \item Hybrid (reciprocal rank fusion)
+\end{itemize}
+
+\subsubsection{Technical Approach}
+
+\begin{itemize}
+    \item \textbf{Policy agent:} LLM generates reasoning tokens + retrieval actions
+    \item \textbf{Actions:} Retrieve from text, retrieve from KG, terminate with answer
+    \item \textbf{Training:} Group-Relative Policy Optimization (GRPO, a PPO variant)
+    \item \textbf{Two-stage training:} Optimizes for task outcome AND retrieval efficiency
+\end{itemize}
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item Outperforms existing RAG baselines on 5 QA benchmarks
+    \item Learns when to use expensive graph retrieval vs. cheap text retrieval
+    \item Backbone: Qwen2.5-3B and 7B
+\end{itemize}
+
+\subsubsection{How We Differ}
+
+\begin{warningbox}{Key Difference}
+\textbf{RouteRAG uses RL}; \textbf{we use supervised learning with oracle labels}.
+
+RL challenges:
+\begin{itemize}
+    \item Reward engineering is tricky
+    \item Training instability (PPO requires careful tuning)
+    \item Expensive: requires many environment interactions
+\end{itemize}
+
+Our supervised approach:
+\begin{itemize}
+    \item Generate oracle labels once (exhaustive pipeline testing)
+    \item Train simple classifier (RandomForest, 5-fold CV)
+    \item Stable, reproducible, no reward hacking
+\end{itemize}
+\end{warningbox}
+
+% ----------------------------------------------------------------------------
+\section{Table Understanding Papers}
+% ----------------------------------------------------------------------------
+
+\subsection{TableFormer (Nassar et al., CVPR 2022)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} TableFormer: Table Structure Understanding with Transformers\\
+\textbf{Authors:} Ahmed Nassar, Nikolaos Livathinos, Maksym Lysak, Peter Staar (IBM Research)\\
+\textbf{Venue:} CVPR 2022 (pages 4614-4623)\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2203.01017}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+TableFormer recognizes table structure from images by predicting \textbf{explicit bounding boxes} for table cells alongside structure recognition. This eliminates the need for custom OCR decoders.
+
+\subsubsection{Technical Innovation}
+
+Previous approaches used encoder-dual-decoder (from PubTabNet). TableFormer improves this by:
+\begin{enumerate}
+    \item Adding an \textbf{object detection decoder} for cell bounding boxes
+    \item Enabling direct content extraction from programmatic PDFs
+    \item Making the system \textbf{language-agnostic}
+\end{enumerate}
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item Outperforms all state-of-the-art methods across different datasets
+    \item \textbf{97.9\% table structure accuracy} (used in Docling)
+    \item Works on complex tables with merged cells, multi-line rows
+\end{itemize}
+
+\subsubsection{Why It Matters for Us}
+
+\begin{resultbox}{Critical for Our Breakthrough}
+TableFormer (via Docling) is what enabled our +94\% improvement on metrics questions!
+
+\textbf{Before:} PyPDF chunking fragmented tables $\rightarrow$ 27\% metrics accuracy
+
+\textbf{After:} TableFormer preserves table structure $\rightarrow$ 52\% metrics accuracy
+\end{resultbox}
+
+% ----------------------------------------------------------------------------
+\subsection{TAPAS (Herzig et al., ACL 2020)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} TaPas: Weakly Supervised Table Parsing via Pre-training\\
+\textbf{Authors:} Jonathan Herzig, Pawel Krzysztof Nowak, Thomas Müller, Francesco Piccinno, Julian Eisenschlos\\
+\textbf{Venue:} ACL 2020 (pages 4320-4333)\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2004.02349}\\
+\textbf{HuggingFace:} \url{https://huggingface.co/docs/transformers/en/model_doc/tapas}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+TAPAS answers questions about tables \textbf{without generating logical forms}. Instead, it directly:
+\begin{enumerate}
+    \item Selects relevant table cells
+    \item Optionally applies aggregation (COUNT, SUM, AVERAGE)
+\end{enumerate}
+
+\subsubsection{Technical Innovation}
+
+\begin{itemize}
+    \item \textbf{Extended BERT architecture} with 7 token types for tabular structure
+    \item \textbf{Relative position embeddings} to encode row/column positions
+    \item \textbf{Two heads:} cell selection + aggregation prediction
+    \item \textbf{Pre-trained} jointly on text and tables crawled from Wikipedia
+\end{itemize}
+
+\subsubsection{Key Results}
+
+\begin{itemize}
+    \item SQA: 55.1\% $\rightarrow$ 67.2\% accuracy
+    \item Competitive with semantic parsing on WikiSQL and WikiTQ
+    \item Transfer learning: WikiSQL $\rightarrow$ WikiTQ yields 48.7\% (4.2 points above prior SOTA)
+\end{itemize}
+
+\subsubsection{Why It Matters for Us}
+
+TAPAS demonstrates that table understanding can be learned end-to-end. Future work could integrate TAPAS-style table reasoning after retrieval.
+
+% ----------------------------------------------------------------------------
+\subsection{TURL (Deng et al., VLDB 2020)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} TURL: Table Understanding through Representation Learning\\
+\textbf{Authors:} Xiang Deng, Huan Sun, Alyssa Lees, You Wu, Cong Yu\\
+\textbf{Venue:} VLDB 2020 (Vol. 14, No. 3, pages 307-319)\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2006.14806}\\
+\textbf{Code:} \url{https://github.com/sunlab-osu/TURL}
+\end{conceptbox}
+
+\subsubsection{Core Contribution}
+
+TURL brings the \textbf{pre-training/fine-tuning paradigm} to relational web tables. It learns deep contextualized representations that transfer across 6 table understanding tasks.
+
+\subsubsection{Technical Innovation}
+
+\begin{itemize}
+    \item \textbf{Structure-aware Transformer} encoder for row-column structure
+    \item \textbf{Masked Entity Recovery (MER)} pre-training objective
+    \item Initialized from TinyBERT for efficiency
+\end{itemize}
+
+\subsubsection{Benchmark Tasks}
+
+\begin{tabular}{@{}lp{7cm}@{}}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+Entity Linking & Link cell mentions to knowledge base entities \\
+Column Type Annotation & Predict semantic type of column \\
+Relation Extraction & Identify relationships between columns \\
+Row Population & Add new rows consistent with table \\
+Cell Filling & Complete missing cell values \\
+Schema Augmentation & Add new columns to table \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Why It Matters for Us}
+
+TURL shows that pre-trained table representations can improve downstream tasks. Future work could use TURL embeddings for better table chunk retrieval.
+
+% ----------------------------------------------------------------------------
+\section{Benchmark \& Dataset Papers}
+% ----------------------------------------------------------------------------
+
+\subsection{FinanceBench (Islam et al., 2023)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} FinanceBench: A New Benchmark for Financial Question Answering\\
+\textbf{Authors:} Pranab Islam, Anand Kannappan, Douwe Kiela, Rebecca Qian, Nino Scherrer, Bertie Vidgen\\
+\textbf{Affiliations:} Patronus AI, Contextual AI, Stanford University\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2311.11944}\\
+\textbf{Data:} \url{https://github.com/patronus-ai/financebench}
+\end{conceptbox}
+
+\subsubsection{Dataset Statistics}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Total questions & 10,231 \\
+Open-source sample & 150 (used in paper evaluation) \\
+Companies covered & 40 publicly traded US companies \\
+Documents & 361 public filings (10-K, 10-Q) \\
+Time range & 2015-2023 \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Question Categories (150 open-source sample)}
+
+\begin{tabular}{@{}lcp{6cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Count} & \textbf{Description} \\
+\midrule
+Metrics-generated & 50 & Questions requiring numerical extraction from tables \\
+Domain-relevant & 50 & Questions about financial concepts and terminology \\
+Novel-generated & 50 & Complex questions requiring reasoning \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Key Findings from Original Paper}
+
+\begin{warningbox}{Sobering Results}
+\textbf{GPT-4-Turbo with retrieval incorrectly answered or refused 81\% of questions!}
+
+Even state-of-the-art LLMs with external information access are not yet reliable for unsupervised financial analysis.
+\end{warningbox}
+
+\subsubsection{Why It Matters for Us}
+
+FinanceBench is our primary evaluation benchmark. Our work specifically targets the \textbf{metrics-generated} category where prior work fails most dramatically.
+
+% ----------------------------------------------------------------------------
+\subsection{dsRAG: 96.6\% on FinanceBench}
+
+\begin{conceptbox}{Project Details}
+\textbf{Name:} dsRAG (D-Star AI)\\
+\textbf{Authors:} Zach and Nick McCormick\\
+\textbf{Repository:} \url{https://github.com/D-Star-AI/dsRAG}\\
+\textbf{Note:} This is an open-source project, not a peer-reviewed paper
+\end{conceptbox}
+
+\subsubsection{Key Result}
+
+dsRAG achieves \textbf{96.6\% accuracy} on FinanceBench using Claude 3.5 Sonnet, compared to 32\% for vanilla RAG.
+
+\subsubsection{Technical Approach}
+
+Three key innovations:
+\begin{enumerate}
+    \item \textbf{Semantic Segmentation:} Intelligent document sectioning
+    \item \textbf{Contextual Auto-generation:} Automatic context enhancement
+    \item \textbf{Relevant Segment Extraction (RSE):} Extracting only relevant segments
+\end{enumerate}
+
+\subsubsection{Why It Matters for Us}
+
+dsRAG sets the current SOTA on FinanceBench. However:
+\begin{itemize}
+    \item Uses Claude 3.5 Sonnet (expensive, proprietary)
+    \item No learned routing -- uses fixed heuristics
+    \item Our goal: achieve competitive results with learned, efficient routing
+\end{itemize}
+
+% ----------------------------------------------------------------------------
+\section{Document Processing: Docling}
+% ----------------------------------------------------------------------------
+
+\begin{conceptbox}{Project Details}
+\textbf{Name:} Docling\\
+\textbf{Organization:} IBM Research Zurich\\
+\textbf{Release:} Open-sourced July 2024\\
+\textbf{Website:} \url{https://www.docling.ai/}\\
+\textbf{Repository:} \url{https://github.com/docling-project/docling}\\
+\textbf{License:} MIT (permissive, open-source)
+\end{conceptbox}
+
+\subsubsection{What It Does}
+
+Docling converts PDFs, manuals, and slide decks into structured data (JSON, Markdown) for LLM consumption. Key capabilities:
+\begin{itemize}
+    \item \textbf{PDF understanding:} Page layout, reading order, table structure
+    \item \textbf{Multiple formats:} PDF, DOCX, PPTX, XLSX, HTML, images
+    \item \textbf{Code, formulas, image classification} support
+\end{itemize}
+
+\subsubsection{Technical Architecture}
+
+Two models power Docling:
+\begin{enumerate}
+    \item \textbf{Layout model:} Vision model using object detection to dissect page layout
+    \item \textbf{TableFormer:} Transforms image-based tables into machine-readable format
+\end{enumerate}
+
+Key advantage: \textbf{Avoids OCR} when possible, reducing errors and improving speed by 30$\times$.
+
+\subsubsection{Granite-Docling Model}
+
+IBM released \textbf{Granite-Docling-258M}, an ultra-compact vision-language model:
+\begin{itemize}
+    \item Only 258M parameters
+    \item Apache 2.0 license
+    \item Preserves layout, tables, equations, lists
+\end{itemize}
+
+\subsubsection{Why It Matters for Us}
+
+\begin{resultbox}{Our Primary Tool}
+Docling + TableFormer enabled our breakthrough:
+\begin{itemize}
+    \item 265 PDFs processed (100\% success)
+    \item 89,566 chunks created
+    \item 97.9\% table structure accuracy
+    \item Metrics questions: 27\% $\rightarrow$ 52\%
+\end{itemize}
+\end{resultbox}
+
+% ----------------------------------------------------------------------------
+\section{RAG Surveys}
+% ----------------------------------------------------------------------------
+
+\subsection{Comprehensive RAG Survey (Gao et al., 2024)}
+
+\begin{conceptbox}{Paper Details}
+\textbf{Title:} Retrieval-Augmented Generation for Large Language Models: A Survey\\
+\textbf{arXiv:} \url{https://arxiv.org/abs/2312.10997}\\
+\textbf{Last Updated:} March 2024
+\end{conceptbox}
+
+\subsubsection{RAG Evolution Taxonomy}
+
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+\textbf{Stage} & \textbf{Characteristics} \\
+\midrule
+Na\"ive RAG & Fixed retrieval, simple concatenation \\
+Advanced RAG & Pre/post-retrieval enhancements, better chunking \\
+Modular RAG & Interchangeable components, adaptive routing \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Why It Matters for Us}
+
+This survey provides the taxonomy for positioning our work. Our contribution falls under \textbf{Modular RAG} with adaptive routing.
+
+% ----------------------------------------------------------------------------
+\section{How Our Work Fits the Landscape}
+
+\begin{verbatim}
+                    RAG RESEARCH LANDSCAPE
+
+    +-------------------------------------------------------+
+    |                    ADAPTIVE RAG                        |
+    |                                                        |
+    |  +-------------+  +-------------+  +-------------+     |
+    |  | Complexity  |  |   Self-     |  |  RL-based   |     |
+    |  |   Routing   |  | Correction  |  |   Routing   |     |
+    |  | (Adaptive-  |  | (CRAG, Self-|  | (RouteRAG)  |     |
+    |  |  RAG 2024)  |  |  RAG 2023)  |  |   2025)     |     |
+    |  +-------------+  +-------------+  +-------------+     |
+    |                                                        |
+    |         +-----------------------------------+          |
+    |         |      OUR CONTRIBUTION:            |          |
+    |         |  Feature-based Pipeline Routing   |          |
+    |         |  + Table-Aware Chunking (Docling) |          |
+    |         |  (Domain-specific, supervised,    |          |
+    |         |   efficient, interpretable)       |          |
+    |         +-----------------------------------+          |
+    |                                                        |
+    +-------------------------------------------------------+
+    |                  FOUNDATIONS                           |
+    |  +-------+  +--------+  +----------+  +-----------+   |
+    |  |  RAG  |  | MAML   |  | ProtoNets|  |TableFormer|   |
+    |  | 2020  |  |  2017  |  |   2017   |  |   2022    |   |
+    |  +-------+  +--------+  +----------+  +-----------+   |
+    +-------------------------------------------------------+
+\end{verbatim}
+
+\section{Recurring Themes from Literature}
+
+\subsection{Pipeline Adaptation vs Model Scaling}
+
+Several papers show that choosing the right strategy for a query can yield gains that pure model scaling might not achieve. This echoes our finding that retrieval engineering can matter more than which LLM you use.
+
+\subsection{Automating the Decision Process}
+
+Different papers use different training signals:
+\begin{itemize}
+    \item \textbf{Adaptive-RAG}: Auto-labels complexity by model performance
+    \item \textbf{RouteRAG}: RL reward combining accuracy and efficiency
+    \item \textbf{Self-RAG}: Synthetic data with inserted tokens
+    \item \textbf{Ours}: Oracle labels from exhaustive pipeline testing
+\end{itemize}
+
+\subsection{Meta-Learning vs Heuristics}
+
+Traditional systems use hard rules (``if question contains number, use calculator''). New approaches replace those with learned policies. Our router learns patterns that hand-crafted rules would miss.
+
+% ============================================================================
+% PART 5: DEEP DIVE - CORE METHODS EXPLAINED
+% ============================================================================
+\newpage
+\part{Deep Dive: Core Methods Explained}
+
+This part provides detailed technical explanations of the methods you \textbf{must} understand deeply. Each section includes the mathematical formulation, algorithm pseudocode, and concrete examples.
+
+% ----------------------------------------------------------------------------
+\section{MAML: Understanding the Math}
+% ----------------------------------------------------------------------------
+
+\subsection{The Problem MAML Solves}
+
+Imagine you have many related tasks (e.g., classifying images of different animal species). Standard training gives you:
+\begin{itemize}
+    \item A model that works well on training tasks
+    \item Poor performance on new tasks (needs lots of data to adapt)
+\end{itemize}
+
+MAML asks: \textbf{Can we find a starting point that makes adaptation fast?}
+
+\subsection{Mathematical Formulation}
+
+Let $\theta$ be the model parameters. For a task $\mathcal{T}_i$:
+
+\begin{conceptbox}{Inner Loop: Task Adaptation}
+Given support set $D_i^{train}$ from task $\mathcal{T}_i$, compute adapted parameters:
+\begin{equation}
+\theta'_i = \theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(f_\theta, D_i^{train})
+\end{equation}
+where:
+\begin{itemize}
+    \item $\alpha$ = inner learning rate (typically 0.01)
+    \item $\mathcal{L}_{\mathcal{T}_i}$ = loss function for task $i$
+    \item $f_\theta$ = model with parameters $\theta$
+\end{itemize}
+\end{conceptbox}
+
+\begin{conceptbox}{Outer Loop: Meta-Update}
+Evaluate adapted parameters on query set $D_i^{test}$, then update $\theta$:
+\begin{equation}
+\theta \leftarrow \theta - \beta \nabla_\theta \sum_{\mathcal{T}_i \sim p(\mathcal{T})} \mathcal{L}_{\mathcal{T}_i}(f_{\theta'_i}, D_i^{test})
+\end{equation}
+where:
+\begin{itemize}
+    \item $\beta$ = outer learning rate (typically 0.001)
+    \item Note: We differentiate through $\theta'_i$, which itself depends on $\theta$
+\end{itemize}
+\end{conceptbox}
+
+\subsection{The Key Insight: Second-Order Gradients}
+
+The outer loop gradient is:
+\begin{equation}
+\nabla_\theta \mathcal{L}(f_{\theta'_i}) = \nabla_{\theta'_i} \mathcal{L}(f_{\theta'_i}) \cdot \frac{\partial \theta'_i}{\partial \theta}
+\end{equation}
+
+Since $\theta'_i = \theta - \alpha \nabla_\theta \mathcal{L}$, we have:
+\begin{equation}
+\frac{\partial \theta'_i}{\partial \theta} = I - \alpha \nabla^2_\theta \mathcal{L}
+\end{equation}
+
+This involves the \textbf{Hessian} $\nabla^2_\theta \mathcal{L}$. Computing this is expensive!
+
+\begin{warningbox}{First-Order Approximation: FOMAML}
+In practice, we often ignore the second-order term:
+\begin{equation}
+\nabla_\theta \mathcal{L}(f_{\theta'_i}) \approx \nabla_{\theta'_i} \mathcal{L}(f_{\theta'_i})
+\end{equation}
+This is much faster and works nearly as well in practice!
+\end{warningbox}
+
+\subsection{Algorithm: Complete Pseudocode}
+
+\begin{lstlisting}[language=Python]
+def maml_train(model, task_distribution, num_iterations):
+    """
+    MAML Training Algorithm
+
+    Args:
+        model: Neural network with parameters theta
+        task_distribution: p(T) to sample tasks from
+        num_iterations: Number of meta-training steps
+    """
+    theta = model.parameters()  # Initialize randomly
+
+    for iteration in range(num_iterations):
+        # Sample batch of tasks
+        task_batch = sample_tasks(task_distribution, batch_size=4)
+
+        meta_gradients = []
+
+        for task in task_batch:
+            # Get support and query sets
+            support_set = task.sample_support(k=5)  # k-shot
+            query_set = task.sample_query(n=15)
+
+            # === INNER LOOP ===
+            theta_prime = theta.clone()
+            for step in range(inner_steps):  # Usually 1-5 steps
+                loss = compute_loss(theta_prime, support_set)
+                grad = compute_gradient(loss, theta_prime)
+                theta_prime = theta_prime - alpha * grad
+
+            # === COMPUTE META-GRADIENT ===
+            query_loss = compute_loss(theta_prime, query_set)
+
+            # Option 1: Full MAML (second-order)
+            meta_grad = compute_gradient(query_loss, theta)
+
+            # Option 2: FOMAML (first-order, faster)
+            # meta_grad = compute_gradient(query_loss, theta_prime)
+
+            meta_gradients.append(meta_grad)
+
+        # === OUTER LOOP: META-UPDATE ===
+        avg_meta_grad = average(meta_gradients)
+        theta = theta - beta * avg_meta_grad
+
+    return theta
+\end{lstlisting}
+
+\subsection{Concrete Example: Router Adaptation}
+
+How MAML applies to our router for cross-domain adaptation:
+
+\begin{lstlisting}[language=Python]
+# Task = Domain (Finance, Medical, Legal)
+# Support set = 20 labeled (question, best_pipeline) pairs
+# Query set = 30 more pairs for evaluation
+
+# INNER LOOP: Adapt to Finance domain
+theta_finance = theta.clone()
+for step in range(5):
+    loss = cross_entropy(router(finance_support, theta_finance), labels)
+    theta_finance = theta_finance - 0.01 * gradient(loss)
+
+# Evaluate on Finance query set
+finance_query_loss = cross_entropy(router(finance_query, theta_finance), labels)
+
+# Repeat for Medical, Legal...
+
+# OUTER LOOP: Update theta to be good starting point for ALL domains
+total_loss = finance_query_loss + medical_query_loss + legal_query_loss
+theta = theta - 0.001 * gradient(total_loss)
+\end{lstlisting}
+
+% ----------------------------------------------------------------------------
+\section{Adaptive-RAG: Complexity-Based Routing (Deep Dive)}
+% ----------------------------------------------------------------------------
+
+\subsection{Paper Overview}
+
+\begin{conceptbox}{Adaptive-RAG at a Glance}
+\textbf{Core Idea:} Not all questions need the same retrieval strategy. Simple questions don't need retrieval; complex questions need multi-hop reasoning.
+
+\textbf{Solution:} Train a classifier to predict question complexity, then route to the appropriate strategy.
+
+\textbf{Key Innovation:} Automatic label generation from model performance---no human annotation needed.
+\end{conceptbox}
+
+\subsection{The Three Retrieval Strategies}
+
+Adaptive-RAG routes questions to one of three strategies:
+
+\begin{verbatim}
++============================================================+
+|              ADAPTIVE-RAG: THREE STRATEGIES                 |
++============================================================+
+
+STRATEGY A: NO RETRIEVAL (Simple Questions)
++------------------------------------------+
+|  Question: "What is 2 + 2?"              |
+|                                          |
+|  LLM --> "4"                             |
+|                                          |
+|  Why: LLM already knows the answer       |
+|  Cost: 1 LLM call, 0 retrieval calls     |
++------------------------------------------+
+
+STRATEGY B: SINGLE-STEP RETRIEVAL (Moderate Questions)
++------------------------------------------+
+|  Question: "When was the Eiffel Tower    |
+|            built?"                       |
+|                                          |
+|  Retrieve(question) --> [doc1, doc2...]  |
+|  LLM(question + docs) --> "1889"         |
+|                                          |
+|  Why: Single fact lookup                 |
+|  Cost: 1 LLM call, 1 retrieval call      |
++------------------------------------------+
+
+STRATEGY C: ITERATIVE RETRIEVAL (Complex Questions)
++------------------------------------------+
+|  Question: "How much older is the Eiffel |
+|            Tower than the Empire State   |
+|            Building?"                    |
+|                                          |
+|  Step 1: Retrieve("Eiffel Tower built")  |
+|          --> 1889                        |
+|  Step 2: Retrieve("Empire State built")  |
+|          --> 1931                        |
+|  Step 3: LLM computes 1931 - 1889 = 42   |
+|                                          |
+|  Why: Multi-hop reasoning required       |
+|  Cost: 1+ LLM calls, 2+ retrieval calls  |
++------------------------------------------+
+\end{verbatim}
+
+\subsection{Automatic Label Generation}
+
+The key innovation: use \textbf{model performance} as supervision signal.
+
+\begin{lstlisting}[language=Python]
+def generate_complexity_labels(questions, llm, retriever):
+    """
+    Automatically label questions by complexity.
+
+    The label is determined by which strategy SUCCEEDS:
+    - If no-retrieval works --> 'A' (simple)
+    - If single-step works but multi-hop fails --> 'B' (moderate)
+    - If only multi-hop works --> 'C' (complex)
+
+    Returns:
+        labels: List of 'A', 'B', or 'C' per question
+    """
+    labels = []
+
+    for q in questions:
+        gold_answer = get_ground_truth(q)
+
+        # === TRY STRATEGY A: No Retrieval ===
+        answer_a = llm.generate(q, context=None)
+        correct_a = is_correct(answer_a, gold_answer)
+
+        # === TRY STRATEGY B: Single-Step Retrieval ===
+        docs = retriever.retrieve(q, k=5)
+        answer_b = llm.generate(q, context=docs)
+        correct_b = is_correct(answer_b, gold_answer)
+
+        # === TRY STRATEGY C: Iterative Multi-Hop ===
+        answer_c = iterative_rag(q, llm, retriever, max_hops=3)
+        correct_c = is_correct(answer_c, gold_answer)
+
+        # === ASSIGN LABEL BASED ON WHAT WORKED ===
+        if correct_a:
+            labels.append('A')  # Simplest strategy worked
+        elif correct_b:
+            labels.append('B')  # Needed retrieval, but not multi-hop
+        elif correct_c:
+            labels.append('C')  # Needed full multi-hop
+        else:
+            # Nothing worked - default to most powerful strategy
+            labels.append('C')
+
+    return labels
+\end{lstlisting}
+
+\subsection{The Iterative Retrieval Algorithm}
+
+For complex (Strategy C) questions:
+
+\begin{lstlisting}[language=Python]
+def iterative_rag(question, llm, retriever, max_hops=3):
+    """
+    Iterative retrieval for multi-hop questions.
+
+    At each hop:
+    1. Generate a sub-query based on what we know so far
+    2. Retrieve relevant documents
+    3. Decide if we have enough info to answer
+    """
+    context = []
+
+    for hop in range(max_hops):
+        # Generate sub-query for this hop
+        if hop == 0:
+            sub_query = question
+        else:
+            sub_query = llm.generate(
+                f"Given the question: {question}\n"
+                f"And what we know: {context}\n"
+                f"What should we search for next?"
+            )
+
+        # Retrieve for this sub-query
+        new_docs = retriever.retrieve(sub_query, k=3)
+        context.extend(new_docs)
+
+        # Check if we can answer now
+        can_answer = llm.generate(
+            f"Question: {question}\n"
+            f"Context: {context}\n"
+            f"Can you answer this question? (yes/no)"
+        )
+
+        if can_answer == "yes":
+            break
+
+    # Generate final answer with all accumulated context
+    answer = llm.generate(
+        f"Question: {question}\n"
+        f"Context: {context}\n"
+        f"Answer:"
+    )
+
+    return answer
+\end{lstlisting}
+
+\subsection{Classifier Architecture and Training}
+
+\begin{lstlisting}[language=Python]
+from transformers import T5ForSequenceClassification
+
+class AdaptiveRAGClassifier:
+    """
+    T5-based complexity classifier.
+
+    Input: Question text
+    Output: Complexity class (A, B, or C)
+    """
+    def __init__(self):
+        # Use T5-base (220M params) - small enough to be fast
+        self.model = T5ForSequenceClassification.from_pretrained(
+            't5-base',
+            num_labels=3  # A=0, B=1, C=2
+        )
+        self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
+
+    def predict(self, question):
+        # Format input with task prefix
+        input_text = f"classify query complexity: {question}"
+        inputs = self.tokenizer(input_text, return_tensors='pt')
+
+        # Get prediction
+        with torch.no_grad():
+            logits = self.model(**inputs).logits
+            pred_class = torch.argmax(logits, dim=-1).item()
+
+        return ['A', 'B', 'C'][pred_class]
+
+    def train(self, questions, labels, epochs=3):
+        """Fine-tune on auto-generated labels."""
+        dataset = ClassificationDataset(questions, labels)
+        trainer = Trainer(
+            model=self.model,
+            train_dataset=dataset,
+            args=TrainingArguments(
+                num_train_epochs=epochs,
+                per_device_train_batch_size=16,
+                learning_rate=5e-5,
+            )
+        )
+        trainer.train()
+\end{lstlisting}
+
+\subsection{Benchmark Results from the Paper}
+
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Method} & \textbf{Single-hop QA} & \textbf{Multi-hop QA} & \textbf{Efficiency} \\
+\midrule
+No Retrieval & 45.2\% & 12.3\% & Fastest \\
+Always Single-Step & 68.4\% & 41.2\% & Medium \\
+Always Iterative & 67.1\% & \textbf{52.8\%} & Slowest \\
+\midrule
+\textbf{Adaptive-RAG} & \textbf{69.2\%} & 51.9\% & \textbf{Adaptive} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+\textit{Key insight: Adaptive-RAG matches or beats the best fixed strategy on each question type while being more efficient overall.}
+
+\subsection{Concrete Examples by Complexity Class}
+
+\begin{tabular}{@{}cp{5cm}p{6cm}@{}}
+\toprule
+\textbf{Class} & \textbf{Example Question} & \textbf{Why This Classification} \\
+\midrule
+\textbf{A} (Simple) & ``What is the chemical formula for water?'' & Common knowledge, no retrieval needed \\
+\midrule
+\textbf{B} (Moderate) & ``What was Tesla's revenue in Q3 2023?'' & Single fact lookup from one document \\
+\midrule
+\textbf{C} (Complex) & ``Compare Apple's and Microsoft's profit margins for 2023'' & Requires retrieving data for both companies, then computing \\
+\bottomrule
+\end{tabular}
+
+\subsection{Critical Limitation for Financial QA}
+
+\begin{warningbox}{Why Adaptive-RAG Fails on FinanceBench}
+Adaptive-RAG classifies questions by \textbf{reasoning complexity}, not \textbf{retrieval requirements}.
+
+\textbf{Problem Example:}
+\begin{verbatim}
+Question: "What was Apple's FY2023 operating margin?"
+
+Adaptive-RAG classification: 'B' (single fact lookup)
+Adaptive-RAG action: Single-step retrieval
+
+BUT the retrieved chunks may have FRAGMENTED TABLES:
+  Chunk 1: "...Operating Income | Net Income..."
+  Chunk 2: "...2023 | $114.3B | $97.0B..."
+
+Neither chunk has BOTH the label AND the value!
+Result: WRONG ANSWER (even though strategy seems right)
+\end{verbatim}
+\end{warningbox}
+
+\subsection{Our Key Differentiation}
+
+\begin{resultbox}{Why Our Approach Works Better for Finance}
+\textbf{Adaptive-RAG routes by:} Question complexity (simple/moderate/complex)
+
+\textbf{We route by:} Domain-specific features that predict WHAT KIND of retrieval is needed
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Our Feature} & \textbf{What It Captures} \\
+\midrule
+\texttt{has\_year} & Likely needs temporal filtering \\
+\texttt{has\_metric\_name} & Likely needs TABLE retrieval \\
+\texttt{expects\_number} & Answer precision matters \\
+\texttt{finance\_density} & Domain-specific vocabulary \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+A question can be ``simple'' (single fact) but still need \textbf{table-aware retrieval}. Adaptive-RAG misses this; we don't.
+\end{resultbox}
+
+% ----------------------------------------------------------------------------
+\section{Self-RAG: Understanding Reflection Tokens (Deep Dive)}
+% ----------------------------------------------------------------------------
+
+\subsection{Paper Overview}
+
+\begin{conceptbox}{Self-RAG at a Glance}
+\textbf{Core Idea:} Train the LLM to generate special ``reflection tokens'' that guide its own retrieval and generation decisions.
+
+\textbf{Key Innovation:} The model learns to critique itself---deciding when to retrieve, whether retrieved docs are relevant, and whether its answers are supported.
+
+\textbf{Result:} ICLR 2024 Oral (top 1\% of submissions). Outperforms ChatGPT on multiple QA benchmarks.
+\end{conceptbox}
+
+\subsection{The Four Reflection Tokens Explained}
+
+Self-RAG extends the LLM vocabulary with four special tokens:
+
+\begin{verbatim}
++================================================================+
+|                SELF-RAG REFLECTION TOKENS                       |
++================================================================+
+
+TOKEN 1: [Retrieve] - "Should I look something up?"
++----------------------------------------------------------+
+|  Generated: Before producing any output                   |
+|  Values: yes | no                                         |
+|                                                           |
+|  Example:                                                 |
+|  Q: "What is 2+2?"      --> [Retrieve]=no (LLM knows)    |
+|  Q: "Tesla Q3 revenue?" --> [Retrieve]=yes (need docs)   |
++----------------------------------------------------------+
+
+TOKEN 2: [IsRel] - "Is this document relevant?"
++----------------------------------------------------------+
+|  Generated: After each retrieved document                 |
+|  Values: relevant | irrelevant                           |
+|                                                           |
+|  Example:                                                 |
+|  Q: "Tesla revenue?"                                      |
+|  Doc: "Tesla CEO Elon Musk..." --> [IsRel]=irrelevant    |
+|  Doc: "Tesla reported $25B..." --> [IsRel]=relevant      |
++----------------------------------------------------------+
+
+TOKEN 3: [IsSup] - "Is my answer supported by evidence?"
++----------------------------------------------------------+
+|  Generated: After producing an answer segment             |
+|  Values: fully_supported | partially_supported | no       |
+|                                                           |
+|  Example:                                                 |
+|  Answer: "Tesla's Q3 revenue was $25.2B"                  |
+|  Doc says: "Tesla reported revenue of $25.2 billion"     |
+|  --> [IsSup]=fully_supported                              |
++----------------------------------------------------------+
+
+TOKEN 4: [IsUse] - "How useful is this response?"
++----------------------------------------------------------+
+|  Generated: At the end of the full response               |
+|  Values: 1 | 2 | 3 | 4 | 5 (utility score)               |
+|                                                           |
+|  Example:                                                 |
+|  Q: "Explain quantum computing"                           |
+|  A: "Quantum computing uses qubits..." (detailed)        |
+|  --> [IsUse]=5                                            |
+|  A: "It's complicated." (unhelpful)                       |
+|  --> [IsUse]=1                                            |
++----------------------------------------------------------+
+\end{verbatim}
+
+\subsection{Complete Generation Flow}
+
+\begin{verbatim}
++=================================================================+
+|              SELF-RAG GENERATION FLOW                            |
++=================================================================+
+
+Input: "What was Apple's market cap at the end of 2023?"
+
+STEP 1: Decide whether to retrieve
++-----------------------------------+
+| Model generates: [Retrieve]=yes   |
+| (Financial data needs lookup)     |
++-----------------------------------+
+            |
+            v
+STEP 2: System retrieves documents
++-----------------------------------+
+| doc1: "Apple Inc. is a tech..."   |
+| doc2: "As of Dec 31, 2023,        |
+|        Apple's market cap was     |
+|        $2.99 trillion..."         |
+| doc3: "Tim Cook became CEO..."    |
++-----------------------------------+
+            |
+            v
+STEP 3: Evaluate each document's relevance
++-----------------------------------+
+| doc1: [IsRel]=irrelevant          |
+| doc2: [IsRel]=relevant    <--     |
+| doc3: [IsRel]=irrelevant          |
++-----------------------------------+
+            |
+            v
+STEP 4: Generate answer using relevant docs
++-----------------------------------+
+| "Apple's market cap at the end of |
+|  2023 was approximately $2.99     |
+|  trillion."                       |
++-----------------------------------+
+            |
+            v
+STEP 5: Check if answer is supported
++-----------------------------------+
+| [IsSup]=fully_supported           |
+| (Number matches doc2 exactly)     |
++-----------------------------------+
+            |
+            v
+STEP 6: Rate overall utility
++-----------------------------------+
+| [IsUse]=5                         |
+| (Direct, accurate answer)         |
++-----------------------------------+
+            |
+            v
+FINAL OUTPUT: "Apple's market cap at the end of 2023 was
+              approximately $2.99 trillion."
+\end{verbatim}
+
+\subsection{Training Pipeline: The Critic Model}
+
+Self-RAG training requires a \textbf{critic model} to generate reflection token labels:
+
+\begin{lstlisting}[language=Python]
+def create_self_rag_training_data(corpus, critic_model):
+    """
+    Create training data with reflection tokens inserted.
+
+    The critic model (GPT-4 or Claude) evaluates each decision
+    point and inserts the appropriate reflection token.
+
+    Args:
+        corpus: List of (question, passage, answer) tuples
+        critic_model: Strong LLM for evaluation (GPT-4)
+
+    Returns:
+        training_examples: Text with reflection tokens inserted
+    """
+    training_examples = []
+
+    for question, passages, gold_answer in corpus:
+
+        # === CRITIC DECISION 1: Should we retrieve? ===
+        retrieve_prompt = f"""
+        Question: {question}
+
+        Does answering this question require external information
+        beyond common knowledge? Answer: yes or no
+        """
+        retrieve_decision = critic_model.generate(retrieve_prompt)
+
+        if retrieve_decision == "yes":
+            # Retrieve documents
+            docs = retrieve(question, k=5)
+
+            for doc in docs:
+                # === CRITIC DECISION 2: Is doc relevant? ===
+                relevance_prompt = f"""
+                Question: {question}
+                Document: {doc}
+
+                Is this document relevant to answering the question?
+                Answer: relevant or irrelevant
+                """
+                relevance = critic_model.generate(relevance_prompt)
+
+                if relevance == "relevant":
+                    # Generate answer conditioned on this doc
+                    answer = generate_answer(question, doc)
+
+                    # === CRITIC DECISION 3: Is answer supported? ===
+                    support_prompt = f"""
+                    Document: {doc}
+                    Generated answer: {answer}
+
+                    Is the answer supported by the document?
+                    Answer: fully_supported, partially_supported, or no_support
+                    """
+                    support = critic_model.generate(support_prompt)
+
+                    # === CRITIC DECISION 4: How useful? ===
+                    utility_prompt = f"""
+                    Question: {question}
+                    Answer: {answer}
+
+                    Rate the utility of this answer from 1-5.
+                    """
+                    utility = critic_model.generate(utility_prompt)
+
+                    # === CONSTRUCT TRAINING EXAMPLE ===
+                    training_example = (
+                        f"Question: {question}\n"
+                        f"[Retrieve]yes\n"
+                        f"Document: {doc}\n"
+                        f"[IsRel]relevant\n"
+                        f"Answer: {answer}\n"
+                        f"[IsSup]{support}\n"
+                        f"[IsUse]{utility}"
+                    )
+                    training_examples.append(training_example)
+
+        else:
+            # No retrieval needed
+            answer = generate_answer(question, context=None)
+            training_example = (
+                f"Question: {question}\n"
+                f"[Retrieve]no\n"
+                f"Answer: {answer}\n"
+                f"[IsUse]{utility}"
+            )
+            training_examples.append(training_example)
+
+    return training_examples
+\end{lstlisting}
+
+\subsection{Inference: Critique-Guided Beam Search}
+
+At test time, Self-RAG uses reflection tokens to \textbf{score and select} generation paths:
+
+\begin{lstlisting}[language=Python]
+def self_rag_inference(question, model, retriever, num_beams=4):
+    """
+    Self-RAG inference with critique-guided beam search.
+
+    The model generates reflection tokens, which are used to
+    score different generation paths. Best path wins.
+    """
+
+    # Step 1: Should we retrieve?
+    retrieve_logits = model.get_next_token_logits("[Retrieve]")
+    p_retrieve = softmax(retrieve_logits)['yes']
+
+    if p_retrieve > 0.5:
+        # Retrieve documents
+        docs = retriever.retrieve(question, k=5)
+
+        # Score each document for relevance
+        candidates = []
+        for doc in docs:
+            # Get relevance score
+            rel_logits = model.get_next_token_logits(
+                f"Question: {question}\nDoc: {doc}\n[IsRel]"
+            )
+            rel_score = softmax(rel_logits)['relevant']
+
+            if rel_score > 0.5:  # Keep relevant docs
+                # Generate answer with this doc
+                answer = model.generate(
+                    f"Question: {question}\nDoc: {doc}\nAnswer:"
+                )
+
+                # Get support score
+                sup_logits = model.get_next_token_logits(
+                    f"Doc: {doc}\nAnswer: {answer}\n[IsSup]"
+                )
+                sup_score = softmax(sup_logits)['fully_supported']
+
+                # Get utility score
+                use_logits = model.get_next_token_logits(
+                    f"Q: {question}\nA: {answer}\n[IsUse]"
+                )
+                use_score = expected_value(softmax(use_logits))  # 1-5
+
+                # Combined score
+                total_score = rel_score + sup_score + use_score / 5
+                candidates.append((answer, total_score, doc))
+
+        # Return best candidate
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return candidates[0][0] if candidates else "Unable to answer."
+
+    else:
+        # Generate without retrieval
+        return model.generate(f"Question: {question}\nAnswer:")
+\end{lstlisting}
+
+\subsection{Key Results from the Paper}
+
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{PopQA} & \textbf{TriviaQA} & \textbf{Biography} & \textbf{ASQA} \\
+\midrule
+Llama2-7B & 14.7 & 55.8 & -- & -- \\
+Llama2-7B + RAG & 38.2 & 62.3 & -- & -- \\
+ChatGPT & 29.3 & 63.4 & 71.2 & 35.3 \\
+ChatGPT + RAG & 50.8 & 67.2 & 74.1 & 40.1 \\
+\midrule
+\textbf{Self-RAG 7B} & \textbf{54.9} & 66.4 & \textbf{81.2} & \textbf{42.8} \\
+\textbf{Self-RAG 13B} & 53.8 & \textbf{69.3} & 79.4 & 41.6 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+\textit{Self-RAG 7B outperforms ChatGPT+RAG on 3/4 benchmarks while being much smaller!}
+
+\subsection{Training Costs and Requirements}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Requirement} & \textbf{Details} \\
+\midrule
+Base Model & Llama 2 (7B or 13B) \\
+Critic Model & GPT-4 for label generation \\
+Training Data & 150K examples with reflection tokens \\
+Fine-tuning & Full parameter fine-tuning (not LoRA) \\
+GPU Hours & $\sim$100 A100 hours for 7B model \\
+Vocab Extension & +4 special tokens \\
+\bottomrule
+\end{tabular}
+
+\subsection{Critical Limitation for Our Use Case}
+
+\begin{warningbox}{Why Self-RAG Doesn't Fit Our Needs}
+Self-RAG requires \textbf{modifying the LLM itself}. This creates several problems:
+
+\textbf{1. Model Lock-in:}
+\begin{itemize}
+    \item Fine-tuned on Llama 2 $\rightarrow$ Can't use GPT-4, Claude, or newer Llamas
+    \item Each new base model requires full retraining
+\end{itemize}
+
+\textbf{2. High Cost:}
+\begin{itemize}
+    \item Need GPT-4 to generate 150K training labels
+    \item Need 100+ A100 GPU hours for fine-tuning
+    \item Need to maintain custom model weights
+\end{itemize}
+
+\textbf{3. Reflection $\neq$ Domain Expertise:}
+\begin{itemize}
+    \item Self-RAG learns WHEN to retrieve, not WHAT to retrieve
+    \item It doesn't know that financial questions need table-aware retrieval
+    \item A revenue question still gets generic semantic search
+\end{itemize}
+\end{warningbox}
+
+\subsection{Our Key Differentiation}
+
+\begin{resultbox}{Why Our Approach is Better for Production}
+
+\begin{tabular}{@{}p{3.5cm}p{4.5cm}p{4.5cm}@{}}
+\toprule
+\textbf{Aspect} & \textbf{Self-RAG} & \textbf{Our Approach} \\
+\midrule
+LLM modification & Required (fine-tuning) & \textbf{None} \\
+Model flexibility & Locked to one base model & \textbf{Any LLM works} \\
+Training cost & High (GPT-4 + fine-tuning) & \textbf{Low (sklearn)} \\
+Update routing & Retrain entire model & \textbf{Retrain small classifier} \\
+Domain awareness & Generic & \textbf{21 domain features} \\
+Table handling & No special support & \textbf{Docling + TableFormer} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+\textbf{Bottom line:} Self-RAG optimizes WHEN to retrieve. We optimize WHAT KIND of retrieval to use---which matters more for domain-specific tasks like financial QA.
+\end{resultbox}
+
+% ----------------------------------------------------------------------------
+\section{TableFormer: How It Preserves Table Structure}
+% ----------------------------------------------------------------------------
+
+\subsection{The Problem with Tables in PDFs}
+
+When a PDF parser encounters a table:
+\begin{verbatim}
++--------+---------+--------+
+| Year   | Revenue | Growth |
++--------+---------+--------+
+| 2021   | $365B   | 33%    |
+| 2022   | $394B   | 8%     |
+| 2023   | $383B   | -3%    |
++--------+---------+--------+
+
+Standard OCR output (WRONG):
+"Year Revenue Growth 2021 $365B 33% 2022 $394B 8% 2023 $383B -3%"
+
+--> All structure is LOST!
+--> "What was 2023 growth?" cannot be answered correctly
+\end{verbatim}
+
+\subsection{TableFormer Architecture}
+
+TableFormer uses a \textbf{transformer encoder-decoder} with two specialized heads:
+
+\begin{verbatim}
+                TableFormer Architecture
+
+    PDF Page Image (RGB)
+           |
+           v
+    +----------------+
+    | Vision Encoder |  (ResNet or ViT backbone)
+    | (Extract CNN   |
+    |  features)     |
+    +----------------+
+           |
+           v
+    +----------------+
+    | Transformer    |
+    | Encoder        |  (Self-attention over image patches)
+    +----------------+
+           |
+     +-----+-----+
+     |           |
+     v           v
++----------+ +----------+
+| Structure| | Bounding |
+| Decoder  | | Box Head |
+|          | | (DETR-   |
+|(Predicts | | style)   |
+|table HTML| |          |
+|structure)| |(Predicts |
++----------+ |cell bbox)|
+     |       +----------+
+     v            |
+"<table>          v
+ <tr>         (x1,y1,x2,y2)
+  <td>        for each cell
+  ..."
+\end{verbatim}
+
+\subsection{Two-Stage Output}
+
+\textbf{Stage 1: Structure Prediction}
+\begin{lstlisting}[language=html]
+<table>
+  <thead>
+    <tr>
+      <th>Year</th>
+      <th>Revenue</th>
+      <th>Growth</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td></td>  <!-- Content filled in Stage 2 -->
+      <td></td>
+      <td></td>
+    </tr>
+    ...
+  </tbody>
+</table>
+\end{lstlisting}
+
+\textbf{Stage 2: Cell Content Extraction}
+
+For each cell, the bounding box head provides coordinates. Then:
+\begin{enumerate}
+    \item If PDF is programmatic: Extract text from PDF at those coordinates
+    \item If PDF is scanned: Run OCR only on that bounding box
+\end{enumerate}
+
+\subsection{Why Bounding Boxes Matter}
+
+\begin{conceptbox}{Key Innovation}
+Previous methods used a \textbf{character-level decoder} to generate cell content.
+
+Problem: OCR errors compound!
+
+TableFormer's approach:
+\begin{itemize}
+    \item Predict structure and bounding boxes separately
+    \item Extract content directly from source (no OCR if possible)
+    \item Errors don't propagate
+\end{itemize}
+\end{conceptbox}
+
+\subsection{Training Objective}
+
+\begin{equation}
+\mathcal{L}_{total} = \mathcal{L}_{structure} + \lambda \mathcal{L}_{bbox}
+\end{equation}
+
+Where:
+\begin{itemize}
+    \item $\mathcal{L}_{structure}$ = Cross-entropy loss for HTML token prediction
+    \item $\mathcal{L}_{bbox}$ = L1 loss + GIoU loss for bounding boxes (DETR-style)
+    \item $\lambda$ = Balancing weight (typically 1.0)
+\end{itemize}
+
+\subsection{Our Usage via Docling}
+
+\begin{lstlisting}[language=Python]
+from docling import process_pdf
+
+def ingest_with_tableformer(pdf_path):
+    """
+    Process PDF preserving table structure.
+    """
+    result = process_pdf(
+        pdf_path,
+        table_mode='accurate',  # Use TableFormer
+        chunk_strategy='semantic'
+    )
+
+    chunks = []
+    for element in result.elements:
+        if element.type == 'table':
+            # Table preserved as markdown!
+            table_md = element.to_markdown()
+            # Example output:
+            # | Year | Revenue | Growth |
+            # |------|---------|--------|
+            # | 2021 | $365B   | 33%    |
+            # | 2022 | $394B   | 8%     |
+
+            # Store as atomic chunk (never split)
+            chunks.append({
+                'content': table_md,
+                'type': 'table',
+                'metadata': element.metadata
+            })
+        else:
+            chunks.append({
+                'content': element.text,
+                'type': 'prose'
+            })
+
+    return chunks
+\end{lstlisting}
+
+% ----------------------------------------------------------------------------
+\section{Prototypical Networks: Simpler Alternative to MAML}
+% ----------------------------------------------------------------------------
+
+\subsection{Core Intuition}
+
+Instead of learning ``how to adapt'' (MAML), learn ``how to compare''.
+
+\begin{verbatim}
+                  Embedding Space
+
+         * * *     (Class A examples)
+          \|/
+           *  <-- Prototype A (mean)
+
+                   ? <-- New query
+
+           *  <-- Prototype B (mean)
+          /|\
+         * * *     (Class B examples)
+
+Query is closer to Prototype A --> Classify as A
+\end{verbatim}
+
+\subsection{Mathematical Formulation}
+
+\textbf{Step 1: Compute Class Prototypes}
+
+Given support set $S$ with classes $\{1, ..., K\}$:
+\begin{equation}
+c_k = \frac{1}{|S_k|} \sum_{(x_i, y_i) \in S_k} f_\phi(x_i)
+\end{equation}
+
+where $f_\phi$ is an embedding network (e.g., CNN or Transformer).
+
+\textbf{Step 2: Classify by Distance}
+
+For query point $x$:
+\begin{equation}
+p(y=k | x) = \frac{\exp(-d(f_\phi(x), c_k))}{\sum_{k'} \exp(-d(f_\phi(x), c_{k'}))}
+\end{equation}
+
+\begin{warningbox}{Distance Function Matters!}
+The paper finds \textbf{Euclidean distance} significantly outperforms cosine similarity:
+\begin{equation}
+d(z, c_k) = ||z - c_k||^2 \quad \text{(Euclidean)}
+\end{equation}
+
+This is counterintuitive -- most NLP uses cosine. But for few-shot, Euclidean in the learned space works better.
+\end{warningbox}
+
+\subsection{Training: Episodic Learning}
+
+\begin{lstlisting}[language=Python]
+def train_protonet(embedding_net, episodes, num_iterations):
+    """
+    Train ProtoNet with episodic learning.
+
+    Each episode simulates a few-shot task.
+    """
+    optimizer = Adam(embedding_net.parameters(), lr=1e-3)
+
+    for iteration in range(num_iterations):
+        # Sample random episode
+        # N classes, K examples per class (support)
+        # Q queries per class
+        support, query, labels = sample_episode(
+            episodes, n_way=5, k_shot=5, n_query=15
+        )
+
+        # Embed support examples
+        support_embeddings = embedding_net(support)  # [N*K, D]
+
+        # Reshape and compute prototypes
+        support_embeddings = support_embeddings.view(N, K, D)
+        prototypes = support_embeddings.mean(dim=1)  # [N, D]
+
+        # Embed queries
+        query_embeddings = embedding_net(query)  # [N*Q, D]
+
+        # Compute distances to all prototypes
+        # dists[i,j] = distance from query i to prototype j
+        dists = euclidean_distance(query_embeddings, prototypes)
+
+        # Negative distance -> logits (closer = higher prob)
+        logits = -dists
+
+        # Cross-entropy loss
+        loss = F.cross_entropy(logits, labels)
+
+        # Backprop
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    return embedding_net
+\end{lstlisting}
+
+\subsection{ProtoNet for Our Router}
+
+\begin{lstlisting}[language=Python]
+class ProtoNetRouter:
+    """
+    Route questions to pipelines using prototypical approach.
+    """
+    def __init__(self, embedding_model):
+        self.embedder = embedding_model
+        self.prototypes = {}  # pipeline -> prototype vector
+
+    def fit(self, oracle_labels):
+        """
+        Compute prototype for each pipeline from oracle data.
+        """
+        pipeline_questions = defaultdict(list)
+
+        for q_id, data in oracle_labels.items():
+            best_pipeline = data['best_pipeline']
+            question_text = data['question']
+            pipeline_questions[best_pipeline].append(question_text)
+
+        for pipeline, questions in pipeline_questions.items():
+            # Embed all questions for this pipeline
+            embeddings = self.embedder.encode(questions)
+            # Prototype = mean embedding
+            self.prototypes[pipeline] = embeddings.mean(axis=0)
+
+    def route(self, question):
+        """
+        Route by finding nearest prototype.
+        """
+        q_embed = self.embedder.encode(question)
+
+        min_dist = float('inf')
+        best_pipeline = None
+
+        for pipeline, prototype in self.prototypes.items():
+            dist = np.linalg.norm(q_embed - prototype)  # Euclidean
+            if dist < min_dist:
+                min_dist = dist
+                best_pipeline = pipeline
+
+        return best_pipeline
+\end{lstlisting}
+
+\subsection{ProtoNet vs MAML: When to Use Which}
+
+\begin{tabular}{@{}p{3cm}p{5cm}p{5cm}@{}}
+\toprule
+\textbf{Aspect} & \textbf{ProtoNet} & \textbf{MAML} \\
+\midrule
+Complexity & Simple (no inner loop) & Complex (nested optimization) \\
+Training & Fast (just embeddings) & Slow (second-order gradients) \\
+Adaptation & Fixed (just recompute prototypes) & Flexible (gradient steps) \\
+When to use & Static domains & Evolving domains \\
+Our case & Good for initial router & Better for cross-domain transfer \\
+\bottomrule
+\end{tabular}
+
+% ----------------------------------------------------------------------------
+\section{Putting It All Together: Our Method}
+% ----------------------------------------------------------------------------
+
+\subsection{Complete Pipeline Architecture}
+
+\begin{verbatim}
++=====================================================================+
+|                    OUR TABLE-AWARE ROUTED RAG                       |
++=====================================================================+
+
+                         User Question
+                              |
+                              v
+    +---------------------------------------------------+
+    |  STAGE 1: FEATURE EXTRACTION (21 features)        |
+    |                                                    |
+    |  - Temporal: has_year, has_quarter, fiscal_ind   |
+    |  - Entity: company_indicator, metric_name         |
+    |  - Structure: expects_number, is_what/how/why     |
+    |  - Domain: finance_density, medical_density       |
+    +---------------------------------------------------+
+                              |
+                              v
+    +---------------------------------------------------+
+    |  STAGE 2: LEARNED ROUTER (RandomForest/MLP)       |
+    |                                                    |
+    |  Input: 21 features                                |
+    |  Output: Best (pipeline, top_k) config            |
+    |                                                    |
+    |  Trained on oracle labels from exhaustive search  |
+    +---------------------------------------------------+
+                              |
+                              v
+    +---------------------------------------------------+
+    |  STAGE 3: TABLE-AWARE RETRIEVAL                   |
+    |                                                    |
+    |  ChromaDB (built with Docling + TableFormer)      |
+    |  - 89,566 chunks                                   |
+    |  - Tables preserved as atomic units               |
+    |  - 97.9% table structure accuracy                 |
+    +---------------------------------------------------+
+                              |
+                              v
+    +---------------------------------------------------+
+    |  STAGE 4: LLM GENERATION                          |
+    |                                                    |
+    |  Any off-the-shelf LLM (GPT-4o-mini, Llama 70B)  |
+    |  Context: Retrieved chunks (including tables)     |
+    +---------------------------------------------------+
+                              |
+                              v
+                         Final Answer
+\end{verbatim}
+
+\subsection{Training the Router: Step by Step}
+
+\begin{lstlisting}[language=Python]
+# === Step 1: Generate Oracle Labels ===
+oracle_labels = {}
+for question in financebench_questions:
+    best_score = 0
+    best_config = None
+
+    for pipeline in ['semantic', 'hybrid_filter_rerank']:
+        for top_k in [5, 10, 20]:
+            answer = run_pipeline(question, pipeline, top_k)
+            score = evaluate(answer, ground_truth)
+
+            if score > best_score:
+                best_score = score
+                best_config = (pipeline, top_k)
+
+    oracle_labels[question.id] = best_config
+
+# === Step 2: Extract Features ===
+X = []  # Feature matrix
+y = []  # Labels (pipeline index)
+
+for q_id, (pipeline, top_k) in oracle_labels.items():
+    features = extract_21_features(questions[q_id])
+    X.append(features)
+    y.append(pipeline_to_idx[f"{pipeline}_k{top_k}"])
+
+X = np.array(X)  # [150, 21]
+y = np.array(y)  # [150,]
+
+# === Step 3: Train Classifier ===
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+
+router = RandomForestClassifier(n_estimators=100, max_depth=10)
+scores = cross_val_score(router, X, y, cv=5)
+print(f"5-fold CV accuracy: {scores.mean():.2%}")
+
+router.fit(X, y)
+joblib.dump(router, 'models/pipeline_router.pkl')
+
+# === Step 4: Inference ===
+def answer_question(question):
+    # Extract features (< 1ms)
+    features = extract_21_features(question)
+
+    # Predict best config (< 1ms)
+    config_idx = router.predict([features])[0]
+    pipeline, top_k = idx_to_config[config_idx]
+
+    # Run only the predicted pipeline (1 API call)
+    return run_pipeline(question, pipeline, top_k)
+\end{lstlisting}
+
+\subsection{Why This Works Better Than Alternatives}
+
+\begin{resultbox}{Our Advantages}
+\textbf{vs Adaptive-RAG:}
+\begin{itemize}
+    \item We route on domain features, not just complexity
+    \item Finance questions need table awareness, not more retrieval iterations
+\end{itemize}
+
+\textbf{vs Self-RAG:}
+\begin{itemize}
+    \item No LLM modification required
+    \item Works with any off-the-shelf model
+    \item Much cheaper to update routing logic
+\end{itemize}
+
+\textbf{vs RouteRAG:}
+\begin{itemize}
+    \item Supervised learning is more stable than RL
+    \item Oracle labels provide clear training signal
+    \item No reward engineering needed
+\end{itemize}
+
+\textbf{Plus: Table-Aware Chunking (Docling)}
+\begin{itemize}
+    \item 97.9\% table structure accuracy
+    \item Tables never split across chunks
+    \item +94\% improvement on metrics questions
+\end{itemize}
+\end{resultbox}
+
+% ============================================================================
+% PART 6: TESTING & ITERATION WORKFLOW
+% ============================================================================
+\newpage
+\part{Testing \& Iteration Workflow}
+
+\section{The Iteration Cycle}
+
+\begin{verbatim}
++---------------------------------------------------------------+
+|                    ITERATION CYCLE                             |
+|                                                                |
+|    +--------+    +--------+    +---------+    +--------+       |
+|    | Change |--->|  Test  |--->| Analyze |--->| Decide |       |
+|    |Something    |(150 Q's)    | Results |    |Next Fix|       |
+|    +--------+    +--------+    +---------+    +--------+       |
+|         ^                                          |           |
+|         +------------------------------------------+           |
++---------------------------------------------------------------+
+\end{verbatim}
+
+\section{Step 1: Make a Change}
+
+Each iteration tests ONE hypothesis:
+
+\begin{tabular}{@{}clp{6cm}@{}}
+\toprule
+\textbf{Iteration} & \textbf{Hypothesis} & \textbf{What We Changed} \\
+\midrule
+1 & ``More context helps'' & top-k: 10 $\rightarrow$ 20 $\rightarrow$ 30 \\
+2 & ``Reranking helps'' & Pipeline: semantic $\rightarrow$ hybrid\_filter\_rerank \\
+3 & ``Better model helps'' & Model: Llama 3.1 $\rightarrow$ Qwen $\rightarrow$ GPT-4o-mini \\
+4 & ``Table chunking is key'' & Ingestion: PyPDF $\rightarrow$ Docling+TableFormer \\
+\bottomrule
+\end{tabular}
+
+\section{Step 2: Run Evaluation}
+
+\begin{lstlisting}[language=bash]
+python src/bulk_testing.py \
+    --model gpt-4o-mini \
+    --pipeline semantic \
+    --top-k 10 \
+    --embedding openai-large \
+    --chroma-path chroma_docling
+\end{lstlisting}
+
+What happens for each of 150 questions:
+\begin{enumerate}
+    \item \textbf{RETRIEVE}: Query ChromaDB $\rightarrow$ Get top-k documents
+    \item \textbf{GENERATE}: Send context + question to LLM $\rightarrow$ Get answer
+    \item \textbf{EVALUATE}: Compare answer to gold standard
+\end{enumerate}
+
+\section{Step 3: Analyze Results}
+
+\begin{lstlisting}[language=bash]
+python scripts/analyze_results.py --results bulk_runs/latest.csv
+python scripts/error_analysis.py --results bulk_runs/latest.csv
+\end{lstlisting}
+
+\section{Step 4: Decide Next Fix}
+
+\begin{verbatim}
+IF metrics-generated is low:
+    --> Problem is likely TABLE HANDLING
+    --> Try: better chunking, larger chunks, table-aware parsing
+
+IF all categories are equally low:
+    --> Problem is likely MODEL or RETRIEVAL
+    --> Try: different model, more top-k, reranking
+
+IF one company/doc consistently fails:
+    --> Problem is likely INGESTION for that doc
+    --> Try: re-ingest, check OCR quality
+\end{verbatim}
+
+\section{Our Iteration History}
+
+\subsection{Iterations 1-10: Finding the Ceiling}
+
+We tried 8 variations (top-k, pipeline, model) and gained only $\sim$1\%. This PROVED that retrieval tuning and model choice weren't the problem.
+
+\begin{warningbox}{Key Learning}
+Without these ``failed'' iterations, we might have kept tuning the wrong thing. The negative results were essential to identifying the real bottleneck.
+\end{warningbox}
+
+\subsection{Iteration 11: The Breakthrough}
+
+Changed from PyPDF chunking to Docling with TableFormer:
+\begin{itemize}
+    \item Overall: 48.5\% $\rightarrow$ 60.4\%
+    \item Metrics: 26.7\% $\rightarrow$ 51.9\%
+\end{itemize}
+
+% ============================================================================
+% PART 6: FUTURE WORK & EXTENSIONS
+% ============================================================================
+\newpage
+\part{Future Work \& Extensions}
+
+\section{Improving the Router}
+
+\subsection{Level 1: Better Features (Easy Win)}
+
+Add question embeddings as features:
+\begin{lstlisting}[language=Python]
+# Current: 21 hand-crafted features
+features = extract_features(question)  # [has_year, has_company, ...]
+
+# Better: 768-dim dense embedding
+embedding = embed_model.encode(question)
+features = np.concatenate([hand_crafted, embedding])
+\end{lstlisting}
+
+\subsection{Level 2: Neural Network Classifiers}
+
+Replace RandomForest with MLP:
+\begin{lstlisting}[language=Python]
+class RouterMLP(nn.Module):
+    def __init__(self, embed_dim=1024, num_classes=6):
+        self.net = nn.Sequential(
+            nn.Linear(embed_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classes)
+        )
+\end{lstlisting}
+
+\subsection{Level 3: Fine-tuned Small Transformer}
+
+Use MiniLM (22M params) fine-tuned for routing:
+\begin{lstlisting}[language=Python]
+from transformers import AutoModelForSequenceClassification
+
+model = AutoModelForSequenceClassification.from_pretrained(
+    "microsoft/MiniLM-L6-v2",
+    num_labels=6  # Pipeline classes
+)
+\end{lstlisting}
+
+\subsection{Level 4: MAML for Cross-Domain}
+
+Train router to adapt quickly to new domains with few examples. This is the strongest future work direction for a full paper.
+
+\section{Other Extensions}
+
+\subsection{Numeric Verification}
+
+Add step to verify numbers in generated answer exist in retrieved context:
+\begin{lstlisting}[language=Python]
+def verify_answer(answer, retrieved_docs):
+    answer_numbers = extract_numbers(answer)
+    context_numbers = extract_numbers(docs)
+
+    for num in answer_numbers:
+        if num not in context_numbers:
+            flag_hallucination(num)
+\end{lstlisting}
+
+\subsection{Multi-Domain Datasets}
+
+Expand beyond finance:
+\begin{itemize}
+    \item \textbf{Medical}: PubMedQA
+    \item \textbf{Legal}: CUAD (contract understanding)
+    \item \textbf{Scientific}: Papers with tables
+\end{itemize}
+
+% ============================================================================
+% PART 7: TECHNICAL DETAILS
+% ============================================================================
+\newpage
+\part{Technical Details}
+
+\section{Cluster Setup (Together AI)}
+
+\subsection{Environment Variables}
+
+\begin{lstlisting}[language=bash]
+# Cache directories (cluster /home is read-only!)
+export HF_HOME=/data/junjiexiong/.cache/huggingface
+export TRANSFORMERS_CACHE=/data/junjiexiong/.cache/huggingface
+export SENTENCE_TRANSFORMERS_HOME=/data/junjiexiong/.cache/huggingface
+export UV_CACHE_DIR=/data/junjiexiong/.cache/uv
+export PIP_CACHE_DIR=/data/junjiexiong/.cache/pip
+
+# API keys
+export OPENAI_API_KEY="your-key"
+export TOGETHER_API_KEY="your-key"
+\end{lstlisting}
+
+\subsection{SLURM Commands}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Task} & \textbf{Command} \\
+\midrule
+Submit job & \texttt{sbatch scripts/eval\_job.sh} \\
+Check status & \texttt{squeue -u junjiexiong} \\
+Cancel job & \texttt{scancel <job\_id>} \\
+Interactive GPU & \texttt{srun --gres=gpu:1 --mem=32G --pty bash} \\
+View logs & \texttt{tail -f logs/eval\_*.out} \\
+\bottomrule
+\end{tabular}
+
+\section{Fixes Applied During Development}
+
+\begin{longtable}{@{}p{2cm}p{4cm}p{6cm}@{}}
+\toprule
+\textbf{Date} & \textbf{Fix} & \textbf{Details} \\
+\midrule
+\endhead
+Session 1 & Created evaluation module & Semantic similarity, LLM-as-judge \\
+Session 1 & Created dataset adapters & FinanceBench, PubMedQA loaders \\
+Session 1 & ChromaDB cleanup & Removed 8,321 duplicate/empty chunks \\
+Session 2 & Model routing fix & ``Turbo'' models $\rightarrow$ Together API \\
+Session 3 & Embedding CLI arg & Fixed 3072d vs 1024d mismatch \\
+Session 3 & rank\_bm25 missing & Added to requirements.txt \\
+Session 3 & pyarrow version & Upgraded to fix mismatch \\
+\bottomrule
+\end{longtable}
+
+\section{Project Structure}
+
+\begin{lstlisting}
+rag/
+|-- src/
+|   |-- config.py              # All configuration
+|   |-- bulk_testing.py        # Main evaluation script
+|   |-- ingest.py              # PDF ingestion
+|   |-- providers/             # LLM provider adapters
+|   |-- retrieval_tools/       # Retrieval pipelines
+|   +-- meta_learning/
+|       |-- features.py        # 21 feature extractor
+|       +-- router.py          # Router class
+|
+|-- scripts/
+|   |-- generate_oracle_labels.py
+|   |-- train_router.py
+|   |-- error_analysis.py
+|   +-- analyze_results.py
+|
+|-- dataset_adapters/
+|   |-- financebench.py
+|   +-- pubmedqa.py
+|
+|-- evaluation/
+|   |-- metrics.py
+|   +-- llm_judge.py
+|
+|-- data/
+|   +-- question_sets/
+|       +-- financebench_open_source.jsonl
+|
+|-- chroma_docling/            # Vector database
++-- bulk_runs/                 # Result CSVs
+\end{lstlisting}
+
+% ============================================================================
+% END
+% ============================================================================
+
+\vspace{2em}
+\hrule
+\vspace{1em}
+
+\begin{center}
+\textit{End of Research Notes}\\
+\textit{Last compiled: \today}
+\end{center}
+
+\end{document}

@@ -1,0 +1,79 @@
+{
+  "model": "gemini-2.0-flash",
+  "timestamp": "2026-01-11T16:46:24.597752",
+  "accuracy": 0.4,
+  "correct": 2,
+  "total": 5,
+  "by_answer_type": {
+    "yes": {
+      "correct": 2,
+      "total": 3,
+      "accuracy": 0.6666666666666666
+    },
+    "no": {
+      "correct": 0,
+      "total": 2,
+      "accuracy": 0.0
+    },
+    "maybe": {
+      "correct": 0,
+      "total": 0,
+      "accuracy": 0
+    }
+  },
+  "avg_generation_time_ms": 631.3092231750488,
+  "temperature": 0.0,
+  "use_cot": false,
+  "results": [
+    {
+      "question_id": "PMQ0000",
+      "pubmed_id": 21645374,
+      "question": "Do mitochondria play a role in remodelling lace plant leaves during programmed cell death?",
+      "gold_answer": "yes",
+      "predicted_answer": "yes",
+      "correct": true,
+      "generation_time_ms": 1683.0391883850098,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0001",
+      "pubmed_id": 16418930,
+      "question": "Landolt C and snellen e acuity: differences in strabismus amblyopia?",
+      "gold_answer": "no",
+      "predicted_answer": "yes",
+      "correct": false,
+      "generation_time_ms": 405.86209297180176,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0002",
+      "pubmed_id": 9488747,
+      "question": "Syncope during bathing in infants, a pediatric form of water-induced urticaria?",
+      "gold_answer": "yes",
+      "predicted_answer": "maybe",
+      "correct": false,
+      "generation_time_ms": 412.64796257019043,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0003",
+      "pubmed_id": 17208539,
+      "question": "Are the long-term results of the transanal pull-through equal to those of the transabdominal pull-through?",
+      "gold_answer": "no",
+      "predicted_answer": "maybe",
+      "correct": false,
+      "generation_time_ms": 331.5598964691162,
+      "error": null
+    },
+    {
+      "question_id": "PMQ0004",
+      "pubmed_id": 10808977,
+      "question": "Can tailored interventions increase mammography use among HMO women?",
+      "gold_answer": "yes",
+      "predicted_answer": "yes",
+      "correct": true,
+      "generation_time_ms": 323.436975479126,
+      "error": null
+    }
+  ]
+}

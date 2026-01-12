@@ -37,7 +37,8 @@ def get_provider(model_name: str, use_cache: bool = True) -> LLMProvider:
     provider_name = provider_config.name
     api_key = provider_config.api_key
 
-    if not api_key:
+    # local-vllm doesn't need an API key
+    if not api_key and provider_name != "local-vllm":
         raise ValueError(
             f"API key not found for provider '{provider_name}'. "
             f"Set {provider_config.api_key_env} environment variable."
@@ -48,10 +49,11 @@ def get_provider(model_name: str, use_cache: bool = True) -> LLMProvider:
         provider = AnthropicProvider(model_name=model_name, api_key=api_key)
     elif provider_name == "google":
         provider = GoogleProvider(model_name=model_name, api_key=api_key)
-    elif provider_name in ("openai", "together", "deepseek"):
+    elif provider_name in ("openai", "together", "deepseek", "local-vllm"):
+        # local-vllm uses OpenAI-compatible API
         provider = OpenAIProvider(
             model_name=model_name,
-            api_key=api_key,
+            api_key=api_key or "not-needed",  # vLLM doesn't require real key
             base_url=provider_config.base_url,
             provider_name_override=provider_name,
         )

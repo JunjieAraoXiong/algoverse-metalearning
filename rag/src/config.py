@@ -140,7 +140,7 @@ PROVIDERS: Dict[str, ProviderConfig] = {
         name="google",
         base_url=None,
         api_key_env="GOOGLE_API_KEY",
-        models=["gemini-3-pro", "gemini-3-flash", "gemini-2.0-flash"],
+        models=["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.0-flash"],
     ),
     "together": ProviderConfig(
         name="together",
@@ -150,6 +150,8 @@ PROVIDERS: Dict[str, ProviderConfig] = {
             "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
             "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
             "deepseek-ai/DeepSeek-V3",
+            "Qwen/Qwen2.5-72B-Instruct-Turbo",  # Serverless (Qwen3-235B needs dedicated)
+            "moonshotai/Kimi-K2-Instruct",
         ],
     ),
     "deepseek": ProviderConfig(
@@ -182,6 +184,8 @@ def get_provider_for_model(model_name: str) -> str:
         if "turbo" in model_lower:
             return "together"  # Turbo models use Together API
         return "local-vllm"
+    elif "qwen" in model_lower or "kimi" in model_lower or "moonshotai" in model_lower:
+        return "together"
     return "together"
 
 
@@ -203,17 +207,23 @@ class RerankerConfig:
 
 
 RERANKERS: Dict[str, RerankerConfig] = {
+    # Local models (free)
     "BAAI/bge-reranker-large": RerankerConfig(
         name="BAAI/bge-reranker-large",
-        description="High quality, slower",
+        description="High quality, slower (FREE)",
     ),
     "BAAI/bge-reranker-base": RerankerConfig(
         name="BAAI/bge-reranker-base",
-        description="Good quality, medium speed",
+        description="Good quality, medium speed (FREE)",
     ),
     "cross-encoder/ms-marco-MiniLM-L-6-v2": RerankerConfig(
         name="cross-encoder/ms-marco-MiniLM-L-6-v2",
-        description="Fast, lower quality",
+        description="Fast, lower quality (FREE)",
+    ),
+    # API models (paid but SOTA quality)
+    "cohere": RerankerConfig(
+        name="cohere",
+        description="Cohere rerank-v3 - SOTA quality, +28% NDCG ($1/1K queries)",
     ),
 }
 
@@ -321,6 +331,12 @@ MODEL_ABBREVS: Dict[str, str] = {
     "deepseek-v3": "deepseek-v3",
     "deepseek-chat": "deepseek-chat",
     "deepseek-reasoner": "deepseek-r1",
+    # Qwen
+    "qwen3-235b": "qwen3-235b",
+    "qwen2.5-72b": "qwen25-72b",
+    "qwen3-coder": "qwen3-coder",
+    # Kimi
+    "kimi-k2": "kimi-k2",
 }
 
 

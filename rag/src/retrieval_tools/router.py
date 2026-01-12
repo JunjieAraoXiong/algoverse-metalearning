@@ -23,7 +23,43 @@ class ClassificationResult:
 
 
 # =============================================================================
-# Question Classifier
+# Rule-Based Classifier (FREE - no API calls)
+# =============================================================================
+
+class RuleBasedClassifier:
+    """Free rule-based classifier using meta_learning.RuleBasedRouter.
+
+    Maps pipeline predictions to question types:
+    - hybrid_filter_rerank → novel-generated (complex reasoning)
+    - hybrid_filter → metrics-generated (specific company + time)
+    - hybrid → domain-relevant (has financial metrics)
+    - semantic → domain-relevant (simple queries)
+    """
+
+    def __init__(self):
+        from src.meta_learning.router import RuleBasedRouter
+        self._router = RuleBasedRouter()
+        self._pipeline_to_type = {
+            'hybrid_filter_rerank': 'novel-generated',
+            'hybrid_filter': 'metrics-generated',
+            'hybrid': 'domain-relevant',
+            'semantic': 'domain-relevant',
+        }
+
+    def classify(self, question: str) -> ClassificationResult:
+        """Classify question using rule-based heuristics (instant, free)."""
+        pipeline = self._router.predict(question)
+        question_type = self._pipeline_to_type.get(pipeline, 'domain-relevant')
+
+        return ClassificationResult(
+            question_type=question_type,
+            confidence=0.8,  # Fixed confidence for rule-based
+            reasoning=f"Rule-based: {pipeline}"
+        )
+
+
+# =============================================================================
+# LLM-Based Question Classifier
 # =============================================================================
 
 _classifier_cache: Dict[str, "LLMQuestionClassifier"] = {}
@@ -438,6 +474,7 @@ def build_routed_pipeline(
     hyde_model: str = None,
     routes: dict = None,
     reranker_model: str = None,
+    use_rule_router: bool = False,
 ) -> RoutedPipeline:
     """
     Build a RoutedPipeline that classifies questions and routes
@@ -450,13 +487,19 @@ def build_routed_pipeline(
         hyde_model: Model for HyDE generation
         routes: Custom route configurations (optional)
         reranker_model: Model for reranking
+        use_rule_router: If True, use free RuleBasedClassifier instead of LLM
 
     Returns:
         RoutedPipeline instance
     """
     from src.config import ROUTES, DEFAULTS
 
-    classifier = get_classifier(model_name=classifier_model)
+    # Choose classifier: rule-based (free) or LLM-based (costs API calls)
+    if use_rule_router:
+        classifier = RuleBasedClassifier()
+    else:
+        classifier = get_classifier(model_name=classifier_model)
+
     hyde_gen = get_hyde_generator(model_name=hyde_model)
     table_filter = TablePreferenceFilter()
 

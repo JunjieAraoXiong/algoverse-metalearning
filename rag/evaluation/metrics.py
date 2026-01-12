@@ -1,8 +1,71 @@
 """Evaluation metrics for RAG system."""
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import numpy as np
 import pandas as pd
+
+
+def categorize_failure(row: Dict[str, Any]) -> str:
+    """Categorize why a question failed to get a good answer.
+
+    Categories:
+    - 'ok': Answer is acceptable (semantic_similarity >= 0.5)
+    - 'error': Processing error occurred
+    - 'retrieval_empty': No documents retrieved
+    - 'numeric_hallucination': Answer contains hallucinated numbers
+    - 'generation_poor': Retrieved docs but generated poor answer
+
+    Args:
+        row: Dictionary or Series with result fields
+
+    Returns:
+        Category string
+    """
+    # Check for errors first
+    if row.get('error'):
+        return 'error'
+
+    # Check for empty retrieval
+    if not row.get('sources'):
+        return 'retrieval_empty'
+
+    # Check for numeric hallucination
+    numeric_score = row.get('numeric_score')
+    if numeric_score is not None and numeric_score < 0.5:
+        return 'numeric_hallucination'
+
+    # Check semantic similarity
+    sem_sim = row.get('semantic_similarity', 0)
+    if sem_sim < 0.5:
+        return 'generation_poor'
+
+    return 'ok'
+
+
+def calculate_failure_breakdown(results_df: pd.DataFrame) -> Dict[str, Any]:
+    """Calculate breakdown of failure categories.
+
+    Args:
+        results_df: DataFrame with evaluation results
+
+    Returns:
+        Dictionary with failure category counts and percentages
+    """
+    categories = results_df.apply(
+        lambda row: categorize_failure(row.to_dict()),
+        axis=1
+    )
+
+    counts = categories.value_counts().to_dict()
+    total = len(results_df)
+
+    breakdown = {
+        'counts': counts,
+        'percentages': {k: v / total for k, v in counts.items()},
+        'total': total,
+    }
+
+    return breakdown
 
 
 def embedding_similarity(
@@ -126,6 +189,20 @@ def calculate_aggregate_metrics(results_df: pd.DataFrame) -> Dict[str, Any]:
         error_count = results_df['error'].notna().sum()
         metrics['error_rate'] = float(error_count / len(results_df)) if len(results_df) > 0 else 0.0
 
+    # Numeric verification metrics
+    if 'numeric_score' in results_df.columns:
+        numeric_values = results_df['numeric_score'].dropna()
+        if len(numeric_values) > 0:
+            metrics['numeric_verification'] = {
+                'mean': float(numeric_values.mean()),
+                'hallucination_rate': float((numeric_values < 1.0).mean()),
+                'perfect_rate': float((numeric_values == 1.0).mean()),
+                'count': int(len(numeric_values)),
+            }
+
+    # Failure breakdown - categorize WHY questions failed
+    metrics['failure_breakdown'] = calculate_failure_breakdown(results_df)
+
     return metrics
 
 
@@ -186,6 +263,23 @@ def format_metrics_summary(metrics: Dict[str, Any]) -> str:
     # Error rate
     if 'error_rate' in metrics:
         lines.append(f"\nError Rate: {metrics['error_rate']:.2%}")
+
+    # Numeric verification
+    if 'numeric_verification' in metrics:
+        num = metrics['numeric_verification']
+        lines.append(f"\nNumeric Verification:")
+        lines.append(f"  Mean Score:        {num['mean']:.4f}")
+        lines.append(f"  Hallucination Rate: {num['hallucination_rate']:.2%}")
+        lines.append(f"  Perfect Rate:      {num['perfect_rate']:.2%}")
+        lines.append(f"  Count:             {num['count']}")
+
+    # Failure breakdown
+    if 'failure_breakdown' in metrics:
+        fb = metrics['failure_breakdown']
+        lines.append(f"\nFailure Breakdown:")
+        for category, pct in sorted(fb['percentages'].items(), key=lambda x: -x[1]):
+            count = fb['counts'].get(category, 0)
+            lines.append(f"  {category:25} {pct:6.1%} ({count})")
 
     lines.append("\n" + "=" * 60)
 
