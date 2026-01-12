@@ -9,6 +9,7 @@ from .hybrid import build_hybrid_retriever, set_retriever_k as set_hybrid_k, tak
 from .metadata_filter import filter_with_question_metadata
 from .rerank import get_reranker
 from .rse import extract_relevant_segments
+from src.config import DEFAULTS
 
 
 class SimplePipeline(RetrievalPipeline):
@@ -109,7 +110,11 @@ def build_retriever_for_pipeline(pipeline_id: str, db, top_k: int):
     """Return a retriever and helpers for the given pipeline."""
     use_hybrid, _, _ = _pipeline_flags(pipeline_id)
     if use_hybrid:
-        retriever = build_hybrid_retriever(db, top_k=top_k)
+        retriever = build_hybrid_retriever(
+            db,
+            top_k=top_k,
+            weights=DEFAULTS.ensemble_weights,  # Use config weights (BM25, semantic)
+        )
         return retriever, set_hybrid_k, take_hybrid_top_k
     retriever = build_semantic_retriever(db, top_k=top_k)
     return retriever, set_semantic_k, take_semantic_top_k

@@ -286,7 +286,7 @@ class Defaults:
     top_k: int = 5
     initial_k_factor: float = 3.0
     pipeline_id: str = "hybrid_filter_rerank"
-    ensemble_weights: tuple = (0.3, 0.7)  # (BM25, semantic) - favor semantic for better table matching
+    ensemble_weights: tuple = (0.5, 0.5)  # (BM25, semantic) - balanced for entity + semantic matching
     rerank_threshold: float = 0.0  # Minimum reranker score (0.0 = no filtering, try 0.1-0.3)
 
     # Generation defaults
