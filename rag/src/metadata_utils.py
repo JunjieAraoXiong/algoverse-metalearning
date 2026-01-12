@@ -188,15 +188,23 @@ def extract_metadata_from_question(question: str) -> Dict[str, any]:
 def filter_chunks_by_metadata(chunks: List, metadata: Dict) -> List:
     """Filter retrieved chunks based on extracted metadata.
 
+    Uses chunk metadata fields (company, year) for STRICT matching,
+    not just source filename strings.
+
     Args:
         chunks: List of Document objects from retriever
-        metadata: Extracted metadata from question
+        metadata: Extracted metadata from question (companies, years, doc_types)
 
     Returns:
-        Filtered list of chunks
+        Filtered list of chunks matching the metadata criteria
     """
-    if not chunks:
+    if not chunks or not metadata:
         return chunks
+
+    # Extract filter criteria (with safe .get())
+    target_companies = [c.upper() for c in metadata.get('companies', [])]
+    target_years = metadata.get('years', [])
+    target_doc_types = [d.upper() for d in metadata.get('doc_types', [])]
 
     filtered = []
 
@@ -204,37 +212,42 @@ def filter_chunks_by_metadata(chunks: List, metadata: Dict) -> List:
         chunk_meta = chunk.metadata
         source = chunk_meta.get('source', '').lower()
 
-        # Check if chunk matches company filter
+        # Get chunk's actual metadata (prefer metadata fields over filename parsing)
+        chunk_company = chunk_meta.get('company', '').upper()
+        chunk_year = chunk_meta.get('year')
+
+        # STRICT company match - use metadata field if available, else filename
         company_match = True
-        if metadata['companies']:
-            company_match = any(
-                company.lower() in source
-                for company in metadata['companies']
-            )
+        if target_companies:
+            if chunk_company:
+                # Use actual metadata field
+                company_match = chunk_company in target_companies
+            else:
+                # Fallback to filename matching
+                company_match = any(c.lower() in source for c in target_companies)
 
-        # Check if chunk matches year filter
+        # STRICT year match - use metadata field if available, else filename
         year_match = True
-        if metadata['years']:
-            year_match = any(
-                str(year) in source
-                for year in metadata['years']
-            )
+        if target_years:
+            if chunk_year is not None:
+                # Use actual metadata field
+                year_match = chunk_year in target_years
+            else:
+                # Fallback to filename matching
+                year_match = any(str(y) in source for y in target_years)
 
-        # Check if chunk matches doc type filter
+        # Doc type match (filename only - not stored in metadata)
         doctype_match = True
-        if metadata['doc_types']:
-            doctype_match = any(
-                dtype in source
-                for dtype in metadata['doc_types']
-            )
+        if target_doc_types:
+            doctype_match = any(d.lower() in source for d in target_doc_types)
 
         # Include chunk if it matches all filters
         if company_match and year_match and doctype_match:
             filtered.append(chunk)
 
-    # If filtering removed everything, return original chunks
-    # (better to have wrong context than no context)
+    # If filtering removed everything, return limited fallback (not all!)
     if not filtered:
-        return chunks
+        print(f"⚠️ Metadata filter: No chunks matched company={target_companies} year={target_years}")
+        return chunks[:5]  # Return top 5 only, not all wrong docs
 
     return filtered
