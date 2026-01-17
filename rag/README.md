@@ -1,87 +1,142 @@
-# RAG System
+# Self-Correcting RAG for Financial Document QA
 
-RAG system for financial document QA, evaluated on FinanceBench.
+A multi-agent RAG framework with judge-driven self-correction for high-stakes document QA.
 
-## Quick Start
+**Paper**: Self-Correcting RAG: Judge-Driven Retrieval for Financial Document QA (FINAI@ICLR 2026)
 
-```bash
-# Install
-pip install -r requirements.txt
+## 🔑 Key Features
 
-# Set API keys
-cp .env.example .env
-# Edit .env with your keys
+- **Three Specialized Agents**: Retrieval, Reasoning, and Judge agents with escalation strategies
+- **Self-Correction Loop**: Judge-driven retry when answers are below quality threshold
+- **Rule-Based Routing**: Zero-cost pipeline selection matching LLM-based routers
+- **Cross-Domain**: Works on Finance (FinanceBench), Medical (PubMedQA), and Legal (CUAD)
 
-# Run evaluation
-python src/bulk_testing.py \
-    --model meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo \
-    --pipeline hybrid_filter_rerank \
-    --top-k 10
-```
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 rag/
 ├── src/
-│   ├── config.py              # Central configuration
-│   ├── bulk_testing.py        # Evaluation runner
-│   ├── ingest.py              # PDF → ChromaDB
-│   ├── providers/             # LLM adapters (Anthropic, OpenAI, Google, etc.)
-│   ├── retrieval_tools/       # Retrieval pipelines
-│   └── postprocessing/        # Answer post-processing
-├── evaluation/                # Metrics & LLM judge
-├── dataset_adapters/          # Dataset loaders (FinanceBench, PubMedQA)
-├── data/                      # Question sets and test files
-├── scripts/                   # SLURM job scripts
-└── docs/                      # Documentation
+│   ├── agents/              # ⭐ Multi-agent system (Algorithm 1)
+│   │   ├── orchestrator.py  # Main retry loop
+│   │   ├── retrieval_agent.py
+│   │   ├── reasoning_agent.py
+│   │   └── judge_agent.py
+│   ├── retrieval_tools/     # Retrieval pipelines
+│   │   ├── semantic.py      # Dense vector search
+│   │   ├── hybrid.py        # BM25 + semantic ensemble
+│   │   ├── rerank.py        # Cross-encoder reranking
+│   │   ├── hyde.py          # Hypothetical Document Embeddings
+│   │   └── router.py        # Question-type routing
+│   ├── providers/           # LLM adapters (OpenAI, Anthropic, etc.)
+│   ├── meta_learning/       # Router training
+│   ├── config.py            # Central configuration
+│   └── bulk_testing.py      # Evaluation entry point
+├── evaluation/              # Metrics & LLM-as-Judge
+├── dataset_adapters/        # FinanceBench, PubMedQA, CUAD loaders
+└── scripts/                 # Experiment & training scripts
 ```
 
-## Retrieval Pipelines
+## 🚀 Quick Start
 
-| Pipeline | Latency | Use Case |
-|----------|---------|----------|
-| `semantic` | ~50ms | Prototyping |
-| `hybrid` | ~100ms | General |
-| `hybrid_filter` | ~120ms | Domain-specific |
-| `hybrid_filter_rerank` | ~300ms | Production (default) |
-
-## Supported Models
-
-| Provider | Models |
-|----------|--------|
-| Together | Llama 3.1 70B |
-| DeepSeek | DeepSeek Chat |
-| Google | Gemini 3 Flash |
-| Anthropic | Claude 4.5 |
-| OpenAI | GPT-5.2 |
-
-## Cluster Usage
-
+### Installation
 ```bash
-# Setup environment
-source scripts/setup_env.sh
-
-# Run evaluation job
-sbatch scripts/eval_job.sh
-
-# Launch vLLM server
-sbatch scripts/launch_vllm.sh
+pip install -r requirements.txt
+cp .env.example .env  # Add your API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY)
 ```
 
-## Docs
-
-- [Cluster Guide](docs/cluster.md) - SLURM setup & commands
-
-## Commands
-
+### Run Single-Pass Baseline
 ```bash
-# Run evaluation
-python src/bulk_testing.py --model deepseek-chat --pipeline hybrid_filter_rerank
-
-# With LLM judge
-python src/bulk_testing.py --model claude-sonnet-4-5-20250514 --use-llm-judge
-
-# Verify ChromaDB
-python -c "from langchain_chroma import Chroma; db = Chroma(persist_directory='chroma'); print(db._collection.count())"
+python src/bulk_testing.py \
+    --dataset financebench \
+    --pipeline hybrid_filter_rerank \
+    --model gpt-4o-mini \
+    --use-llm-judge
 ```
+
+### Run Self-Correcting RAG (Agentic Mode)
+```bash
+python src/bulk_testing.py \
+    --dataset financebench \
+    --pipeline routed \
+    --model gpt-4o-mini \
+    --use-llm-judge \
+    --use-agentic-retry \
+    --max-retries 1
+```
+
+## 🔧 Retrieval Pipelines
+
+| Pipeline | Description | When to Use |
+|----------|-------------|-------------|
+| `semantic` | Dense vector search | Simple factual queries |
+| `hybrid` | BM25 + semantic ensemble | Keyword-heavy queries |
+| `hybrid_filter` | Hybrid + metadata filtering | Entity-specific queries |
+| `hybrid_filter_rerank` | Full pipeline with reranking | Complex reasoning |
+| `routed` | Dynamic selection + retry | **Production (recommended)** |
+
+## 🧠 Algorithm Overview
+
+The orchestrator implements a judge-driven retry loop:
+
+```
+while attempt ≤ max_retries:
+    docs = RetrievalAgent.retrieve(question, attempt)
+    answer = ReasoningAgent.generate(question, docs)
+    score = JudgeAgent.evaluate(question, answer)
+
+    if score ≥ threshold:
+        return answer
+
+    escalate_strategies()
+    attempt += 1
+```
+
+**Escalation strategies:**
+- **Retrieval**: Increase k (10→20→25), enable HyDE
+- **Reasoning**: Standard → Conservative → Detailed prompts
+- **Judge**: Lower threshold (0.5→0.4→0.3)
+
+## 📊 Reproducing Results
+
+### Step 1: Prepare ChromaDB
+```bash
+# Download pre-built embeddings (recommended)
+# [Link to be added after publication]
+
+# Or build from scratch (requires SEC PDFs)
+python src/ingest_docling.py --input-dir data/pdfs --output-dir chroma_docling
+```
+
+### Step 2: Run Experiments
+```bash
+# Table 1: Single-pass vs Self-Correcting RAG
+python src/bulk_testing.py --dataset financebench --pipeline hybrid_filter_rerank --model gpt-4o-mini --use-llm-judge
+python src/bulk_testing.py --dataset financebench --pipeline routed --model gpt-4o-mini --use-llm-judge --use-agentic-retry
+
+# Table 4: Cross-domain validation
+python src/bulk_testing.py --dataset pubmedqa --pipeline routed --model gpt-4o-mini --use-agentic-retry --domain medical
+python src/bulk_testing.py --dataset cuad --pipeline routed --model gpt-4o-mini --use-agentic-retry --domain legal
+```
+
+## 🛠 Supported Models
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| OpenAI | gpt-4o-mini, gpt-4o | Recommended for evaluation |
+| Anthropic | claude-sonnet-4-5-20250514 | High quality |
+| Together | Llama 3.1 70B | For cluster deployment |
+
+## 📄 Citation
+
+```bibtex
+@inproceedings{anonymous2026selfcorrecting,
+  title={Self-Correcting RAG: Judge-Driven Retrieval for Financial Document QA},
+  author={Anonymous},
+  booktitle={FINAI Workshop at ICLR 2026},
+  year={2026}
+}
+```
+
+## 📝 License
+
+MIT License

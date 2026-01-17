@@ -41,3 +41,15 @@ logs/
 *.tmp
 # Related work repos (reference only, not committed)
 related_repos/
+
+# Agent logs (generated)
+agent_logs*/
+
+# Archive (old experiments)
+archive/
+
+# Results (generated, large)
+oracle_labels/
+
+# Large zip files
+*.zip
