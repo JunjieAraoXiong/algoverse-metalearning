@@ -128,6 +128,92 @@ python src/bulk_testing.py --dataset cuad --pipeline routed --model gpt-4o-mini 
 | Anthropic | claude-sonnet-4-5-20250514 | High quality |
 | Together | Llama 3.1 70B | For cluster deployment |
 
+## Provider Architecture
+
+The system uses a provider abstraction layer for multi-LLM support:
+
+```
++------------------+
+|   User Code      |
+|  (bulk_testing)  |
++--------+---------+
+         |
+         v
++------------------+
+|  get_provider()  |  <-- Entry point
++--------+---------+
+         |
+         v
++------------------+
+|    config.py     |  <-- Routes model name to provider type
++--------+---------+
+         |
+         v
++------------------+
+|   factory.py     |  <-- Creates provider instances
++--------+---------+
+         |
+         v
++------------------+
+|  LLMProvider ABC |  <-- Abstract interface: generate(), embed()
++--------+---------+
+         |
+    +----+----+
+    |    |    |
+    v    v    v
++------+------+------+
+|OpenAI|Anthro|Togeth|  <-- Concrete implementations
++------+------+------+
+```
+
+### What Works Well
+
+1. **Factory pattern** - Single `get_provider()` call handles all provider logic
+2. **Lazy loading** - Providers instantiated only when needed
+3. **Instance caching** - Same provider reused across calls
+4. **Standardized response** - All providers return `LLMResponse` dataclass
+5. **Config-driven routing** - Model names mapped to providers in `config.py`
+
+### Research-Grade Standards
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Provider abstraction | Complete | ABC with OpenAI/Anthropic/Together |
+| Environment-based API keys | Complete | Via `python-dotenv` |
+| Usage tracking | Partial | Token counts returned but not aggregated |
+| Cost tracking | Missing | No per-request cost calculation |
+| Retry logic | Missing | No exponential backoff on failures |
+| Rate limiting | Missing | No request throttling |
+| Request logging | Missing | No structured logging for debugging |
+| Model versioning | Complete | Full model IDs in config |
+| Reproducibility | Partial | Seeds set but not logged with results |
+
+### Quick Win: Cost Tracking
+
+Add to `LLMResponse` dataclass:
+
+```python
+@dataclass
+class LLMResponse:
+    content: str
+    model: str
+    usage: dict
+    cost_usd: float = 0.0  # Add this field
+
+# In provider implementations:
+COST_PER_1K = {
+    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+    "gpt-4o": {"input": 0.005, "output": 0.015},
+    "claude-sonnet-4-5-20250514": {"input": 0.003, "output": 0.015},
+}
+
+def calculate_cost(model: str, usage: dict) -> float:
+    rates = COST_PER_1K.get(model, {"input": 0, "output": 0})
+    input_cost = (usage.get("prompt_tokens", 0) / 1000) * rates["input"]
+    output_cost = (usage.get("completion_tokens", 0) / 1000) * rates["output"]
+    return input_cost + output_cost
+```
+
 ## Citation
 
 ```bibtex
