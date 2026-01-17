@@ -4,19 +4,19 @@ A multi-agent RAG framework with judge-driven self-correction for high-stakes do
 
 **Paper**: Self-Correcting RAG: Judge-Driven Retrieval for Financial Document QA (FINAI@ICLR 2026)
 
-## 🔑 Key Features
+## Key Features
 
 - **Three Specialized Agents**: Retrieval, Reasoning, and Judge agents with escalation strategies
 - **Self-Correction Loop**: Judge-driven retry when answers are below quality threshold
 - **Rule-Based Routing**: Zero-cost pipeline selection matching LLM-based routers
 - **Cross-Domain**: Works on Finance (FinanceBench), Medical (PubMedQA), and Legal (CUAD)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 rag/
 ├── src/
-│   ├── agents/              # ⭐ Multi-agent system (Algorithm 1)
+│   ├── agents/              # Multi-agent system (Algorithm 1)
 │   │   ├── orchestrator.py  # Main retry loop
 │   │   ├── retrieval_agent.py
 │   │   ├── reasoning_agent.py
@@ -36,7 +36,7 @@ rag/
 └── scripts/                 # Experiment & training scripts
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 ```bash
@@ -66,7 +66,7 @@ python src/bulk_testing.py \
     --max-retries 1
 ```
 
-## 🔧 Retrieval Pipelines
+## Retrieval Pipelines
 
 | Pipeline | Description | When to Use |
 |----------|-------------|-------------|
@@ -76,17 +76,17 @@ python src/bulk_testing.py \
 | `hybrid_filter_rerank` | Full pipeline with reranking | Complex reasoning |
 | `routed` | Dynamic selection + retry | **Production (recommended)** |
 
-## 🧠 Algorithm Overview
+## Algorithm Overview
 
 The orchestrator implements a judge-driven retry loop:
 
 ```
-while attempt ≤ max_retries:
+while attempt <= max_retries:
     docs = RetrievalAgent.retrieve(question, attempt)
     answer = ReasoningAgent.generate(question, docs)
     score = JudgeAgent.evaluate(question, answer)
 
-    if score ≥ threshold:
+    if score >= threshold:
         return answer
 
     escalate_strategies()
@@ -94,11 +94,11 @@ while attempt ≤ max_retries:
 ```
 
 **Escalation strategies:**
-- **Retrieval**: Increase k (10→20→25), enable HyDE
-- **Reasoning**: Standard → Conservative → Detailed prompts
-- **Judge**: Lower threshold (0.5→0.4→0.3)
+- **Retrieval**: Increase k (10 -> 20 -> 25), enable HyDE
+- **Reasoning**: Standard -> Conservative -> Detailed prompts
+- **Judge**: Lower threshold (0.5 -> 0.4 -> 0.3)
 
-## 📊 Reproducing Results
+## Reproducing Results
 
 ### Step 1: Prepare ChromaDB
 ```bash
@@ -120,7 +120,7 @@ python src/bulk_testing.py --dataset pubmedqa --pipeline routed --model gpt-4o-m
 python src/bulk_testing.py --dataset cuad --pipeline routed --model gpt-4o-mini --use-agentic-retry --domain legal
 ```
 
-## 🛠 Supported Models
+## Supported Models
 
 | Provider | Models | Notes |
 |----------|--------|-------|
@@ -128,7 +128,7 @@ python src/bulk_testing.py --dataset cuad --pipeline routed --model gpt-4o-mini 
 | Anthropic | claude-sonnet-4-5-20250514 | High quality |
 | Together | Llama 3.1 70B | For cluster deployment |
 
-## 📄 Citation
+## Citation
 
 ```bibtex
 @inproceedings{anonymous2026selfcorrecting,
@@ -139,6 +139,6 @@ python src/bulk_testing.py --dataset cuad --pipeline routed --model gpt-4o-mini 
 }
 ```
 
-## 📝 License
+## License
 
 MIT License
