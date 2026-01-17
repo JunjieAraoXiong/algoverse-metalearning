@@ -1,0 +1,312 @@
+{
+  "metadata": {
+    "generated_at": "2026-01-17T02:09:34.389920",
+    "tex_file": "papers/iclr2026-finai-workshop/main.tex",
+    "bib_file": "papers/iclr2026-finai-workshop/references.bib"
+  },
+  "summary": {
+    "total_citations": 20,
+    "verified": 17,
+    "warnings": 3,
+    "errors": 0,
+    "flag_breakdown": {
+      "PAPER_NOT_FOUND": 3
+    }
+  },
+  "citations": [
+    {
+      "key": "lewis2020retrieval",
+      "status": "VERIFIED",
+      "context": "Retrieval-augmented generation (RAG) has become the standard paradigm for knowledge-intensive question answering, enabling language models to ground their responses in retrieved documents~\\citep{lewis2020retrieval}. However, as RAG systems are deployed in high-stakes domains such as finance, healthcare, and legal services, a critical limitation emerges: conventional single-pass RAG pipelines lack the ability to recognize and correct their own failures.",
+      "file": "intro.tex",
+      "line_number": 7,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Retrieval-augmented generation for knowledge-intensive NLP tasks",
+      "paper_title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "yao2022react",
+      "status": "VERIFIED",
+      "context": "Unlike prior work on agentic LLMs that focuses on tool use or multi-step reasoning~\\citep{yao2022react,shinn2023reflexion}, our framework specifically targets document question-answering with explicit agent boundaries and escalation policies.",
+      "file": "intro.tex",
+      "line_number": 25,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "ReAct: Synergizing reasoning and acting in language models",
+      "paper_title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "shinn2023reflexion",
+      "status": "VERIFIED",
+      "context": "Unlike prior work on agentic LLMs that focuses on tool use or multi-step reasoning~\\citep{yao2022react,shinn2023reflexion}, our framework specifically targets document question-answering with explicit agent boundaries and escalation policies.",
+      "file": "intro.tex",
+      "line_number": 25,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Reflexion: Language agents with verbal reinforcement learning",
+      "paper_title": "Reflexion: language agents with verbal reinforcement learning",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "madaan2023self",
+      "status": "VERIFIED",
+      "context": "While iterative self-correction has proven effective in general reasoning tasks (Self-Refine achieved 15--20\\% improvements on select benchmarks through single-model self-feedback~\\citep{madaan2023self}, and Reflexion demonstrated iterative improvement through verbal reflection~\\citep{shinn2023reflexion}), applying this paradigm to retrieval-augmented document QA requires coordination across distinct components: retrieval strategies, generation prompts, and quality evaluation, each with its own escalation policies.",
+      "file": "intro.tex",
+      "line_number": 25,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Self-refine: Iterative refinement with self-feedback",
+      "paper_title": "Self-Refine: Iterative Refinement with Self-Feedback",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "singh2025agenticrag",
+      "status": "VERIFIED",
+      "context": "Our work falls within the emerging paradigm of Agentic RAG~\\citep{singh2025agenticrag}, which embeds autonomous AI agents into retrieval-augmented pipelines to enable reflection, planning, and self-correction capabilities beyond traditional single-pass systems.",
+      "file": "related.tex",
+      "line_number": 7,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Agentic Retrieval-Augmented Generation: A Survey on Agentic RAG",
+      "paper_title": "Agentic Retrieval-Augmented Generation: A Survey on Agentic RAG",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "asai2024selfrag",
+      "status": "VERIFIED",
+      "context": "In the RAG setting, Self-RAG~\\citep{asai2024selfrag} trains models to generate retrieval tokens and self-assess relevance, and CRAG~\\citep{yan2024corrective} triggers corrective retrieval when initial results are insufficient.",
+      "file": "related.tex",
+      "line_number": 10,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Self-RAG: Learning to retrieve, generate, and critique through self-reflection",
+      "paper_title": "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "yan2024corrective",
+      "status": "VERIFIED",
+      "context": "In the RAG setting, Self-RAG~\\citep{asai2024selfrag} trains models to generate retrieval tokens and self-assess relevance, and CRAG~\\citep{yan2024corrective} triggers corrective retrieval when initial results are insufficient.",
+      "file": "related.tex",
+      "line_number": 10,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Corrective retrieval augmented generation",
+      "paper_title": "Corrective Retrieval Augmented Generation",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "ozer2024mar",
+      "status": "WARNING",
+      "context": "Recent work on Multi-Agent Reflexion~\\citep{ozer2024mar} demonstrates that multi-agent critique outperforms single-agent self-reflection by providing diverse feedback perspectives and avoiding confirmation bias, supporting our architectural choice of agent separation.",
+      "file": "related.tex",
+      "line_number": 12,
+      "flag": "PAPER_NOT_FOUND",
+      "message": "Paper not found on Semantic Scholar: 'MAR: Multi-Agent Reflexion for LLM Reasoning'",
+      "bib_title": "MAR: Multi-Agent Reflexion for LLM Reasoning",
+      "verification": {
+        "exists": false
+      }
+    },
+    {
+      "key": "jeong2024adaptive",
+      "status": "VERIFIED",
+      "context": "Adaptive-RAG~\\citep{jeong2024adaptive} uses a classifier to route queries to different retrieval pipelines based on complexity.",
+      "file": "related.tex",
+      "line_number": 17,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Adaptive-RAG: Learning to adapt retrieval-augmented large language models through question complexity",
+      "paper_title": "Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "zhang2025ragrouter",
+      "status": "WARNING",
+      "context": "RAGRouter~\\citep{zhang2025ragrouter} extends this by routing across heterogeneous RAG systems, a complementary challenge to our focus on self-correction within a unified multi-agent system.",
+      "file": "related.tex",
+      "line_number": 17,
+      "flag": "PAPER_NOT_FOUND",
+      "message": "Paper not found on Semantic Scholar: 'RAGRouter: Routing Queries Across Heterogeneous RAG Systems'",
+      "bib_title": "RAGRouter: Routing Queries Across Heterogeneous RAG Systems",
+      "verification": {
+        "exists": false
+      }
+    },
+    {
+      "key": "chen2024bge",
+      "status": "VERIFIED",
+      "context": "While advances in hybrid retrieval~\\citep{chen2024bge}, cross-encoder reranking~\\citep{nogueira2019passage}, and query expansion~\\citep{gao2022precise} improve single-pass performance, they cannot recover when initial retrieval misses critical context.",
+      "file": "related.tex",
+      "line_number": 22,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "BGE M3-Embedding: Multi-lingual, multi-functionality, multi-granularity text embeddings through self-knowledge distillation",
+      "paper_title": "M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "nogueira2019passage",
+      "status": "VERIFIED",
+      "context": "While advances in hybrid retrieval~\\citep{chen2024bge}, cross-encoder reranking~\\citep{nogueira2019passage}, and query expansion~\\citep{gao2022precise} improve single-pass performance, they cannot recover when initial retrieval misses critical context.",
+      "file": "related.tex",
+      "line_number": 22,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Passage re-ranking with BERT",
+      "paper_title": "Passage Re-ranking with BERT",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "gao2022precise",
+      "status": "VERIFIED",
+      "context": "While advances in hybrid retrieval~\\citep{chen2024bge}, cross-encoder reranking~\\citep{nogueira2019passage}, and query expansion~\\citep{gao2022precise} improve single-pass performance, they cannot recover when initial retrieval misses critical context.",
+      "file": "related.tex",
+      "line_number": 22,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Precise zero-shot dense retrieval without relevance labels",
+      "paper_title": "Precise Zero-Shot Dense Retrieval without Relevance Labels",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "islam2023financebench",
+      "status": "VERIFIED",
+      "context": "FinanceBench~\\citep{islam2023financebench} reveals this limitation: questions requiring numerical precision from SEC filings often fail on first retrieval due to entity ambiguity or temporal misalignment.",
+      "file": "related.tex",
+      "line_number": 22,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "FinanceBench: A new benchmark for financial question answering",
+      "paper_title": "FinanceBench: A New Benchmark for Financial Question Answering",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "zheng2023judging",
+      "status": "VERIFIED",
+      "context": "Using LLMs to evaluate generated text provides scalable quality assessment~\\citep{zheng2023judging}.",
+      "file": "related.tex",
+      "line_number": 27,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Judging LLM-as-a-judge with MT-Bench and Chatbot Arena",
+      "paper_title": "Judging LLM-as-a-judge with MT-Bench and Chatbot Arena",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "liu2023geval",
+      "status": "VERIFIED",
+      "context": "G-Eval~\\citep{liu2023geval} applies chain-of-thought for fine-grained evaluation.",
+      "file": "related.tex",
+      "line_number": 27,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "G-eval: NLG evaluation using GPT-4 with better human alignment",
+      "paper_title": "G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "zhuge2024agent",
+      "status": "VERIFIED",
+      "context": "Future work could explore ensemble judge strategies or fine-tuned smaller verifier models~\\citep{zhuge2024agent} to further improve reliability.",
+      "file": "method.tex",
+      "line_number": 251,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "Agent-as-a-Judge: Evaluate Agents with Agents",
+      "paper_title": "Agent-as-a-Judge: Evaluate Agents with Agents",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "jin2019pubmedqa",
+      "status": "VERIFIED",
+      "context": "To validate architectural robustness under such distribution shifts, we evaluate on PubMedQA~\\citep{jin2019pubmedqa} (biomedical yes/no/maybe reasoning over research abstracts) and CUAD~\\citep{hendrycks2021cuad} (legal contract clause extraction).",
+      "file": "experiments.tex",
+      "line_number": 31,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "PubMedQA: A dataset for biomedical research question answering",
+      "paper_title": "PubMedQA: A Dataset for Biomedical Research Question Answering",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "hendrycks2021cuad",
+      "status": "VERIFIED",
+      "context": "To validate architectural robustness under such distribution shifts, we evaluate on PubMedQA~\\citep{jin2019pubmedqa} (biomedical yes/no/maybe reasoning over research abstracts) and CUAD~\\citep{hendrycks2021cuad} (legal contract clause extraction).",
+      "file": "experiments.tex",
+      "line_number": 31,
+      "message": "Paper exists (claim verification skipped)",
+      "bib_title": "CUAD: An expert-annotated NLP dataset for legal contract review",
+      "paper_title": "CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review",
+      "verification": {
+        "exists": true,
+        "abstract_available": true,
+        "claim_verified": false
+      }
+    },
+    {
+      "key": "alpacaeval2023",
+      "status": "WARNING",
+      "context": "When gold answers are available, we use GPT-4o-mini as a judge to rate answer quality on a 0-1 scale, following established LLM-as-Judge methodology~\\citep{zheng2023judging,liu2023geval} validated at scale by AlpacaEval~\\citep{alpacaeval2023}. Given that 66\\% of FinanceBench questions require numerical calculations, we augment automatic evaluation with programmatic numeric verification to catch magnitude errors that language models often miss.",
+      "file": "experiments.tex",
+      "line_number": 65,
+      "flag": "PAPER_NOT_FOUND",
+      "message": "Paper not found on Semantic Scholar: 'AlpacaEval: An Automatic Evaluator for Instruction-Following Language Models'",
+      "bib_title": "AlpacaEval: An Automatic Evaluator for Instruction-Following Language Models",
+      "verification": {
+        "exists": false
+      }
+    }
+  ]
+}

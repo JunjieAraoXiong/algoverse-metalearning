@@ -1,0 +1,348 @@
+% Method Section for Self-Correcting RAG Paper
+% FINAI@ICLR 2026 Workshop
+
+\section{Method: Self-Correcting RAG Architecture}
+\label{sec:method}
+
+We present a multi-agent retrieval-augmented generation (RAG) framework that decomposes document question-answering into three specialized agents coordinated by an orchestrator with self-correction capabilities. Unlike single-pass RAG systems, our architecture enables explicit decision-making at each stage and feedback-driven retry when initial answers are inadequate.
+
+\subsection{System Overview}
+\label{sec:overview}
+
+Our framework consists of four components: (1) a \textbf{Retrieval Agent} that selects retrieval strategies and fetches relevant documents, (2) a \textbf{Reasoning Agent} that generates answers from retrieved context, (3) a \textbf{Judge Agent} that evaluates answer quality and decides whether to retry, and (4) an \textbf{Orchestrator} that coordinates the agents and manages the feedback loop.
+
+\begin{figure}[t]
+\centering
+\definecolor{retrievalblue}{RGB}{66, 133, 244}
+\definecolor{retrievalfill}{RGB}{232, 240, 254}
+\definecolor{reasoninggreen}{RGB}{52, 168, 83}
+\definecolor{reasoningfill}{RGB}{230, 244, 234}
+\definecolor{judgeorange}{RGB}{251, 188, 4}
+\definecolor{judgefill}{RGB}{254, 247, 224}
+\definecolor{orchestratorgray}{RGB}{150, 150, 150}
+\definecolor{arrowgray}{RGB}{120, 120, 120}
+\definecolor{feedbackred}{RGB}{234, 67, 53}
+\begin{tikzpicture}[
+    node distance=1.0cm,
+    % Professional Google-inspired color palette
+    retrieval/.style={rectangle, draw=retrievalblue, rounded corners=4pt, minimum width=2.2cm, minimum height=1.1cm, fill=retrievalfill, line width=1pt, font=\small\sffamily},
+    reasoning/.style={rectangle, draw=reasoninggreen, rounded corners=4pt, minimum width=2.2cm, minimum height=1.1cm, fill=reasoningfill, line width=1pt, font=\small\sffamily},
+    judge/.style={rectangle, draw=judgeorange, rounded corners=4pt, minimum width=2.2cm, minimum height=1.1cm, fill=judgefill, line width=1pt, font=\small\sffamily},
+    orchestrator/.style={rectangle, draw=orchestratorgray, rounded corners=6pt, fill=white, line width=0.8pt, dashed},
+    io/.style={font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm, width=1.8mm]}, line width=0.8pt, arrowgray},
+    feedback/.style={-{Stealth[length=2.5mm, width=1.8mm]}, line width=0.8pt, feedbackred!70, dashed},
+    label/.style={font=\scriptsize\sffamily, arrowgray}
+]
+    % Orchestrator container
+    \node[orchestrator, minimum width=11.5cm, minimum height=3.4cm] (orch) {};
+    \node[above=0.1cm of orch.north, font=\small\sffamily\bfseries, gray!70] {Orchestrator};
+
+    % Three agents with distinct colors - wider spacing
+    \node[retrieval, align=center] (ret) at (-3.6, 0) {\textbf{Retrieval}\\Agent};
+    \node[reasoning, align=center] (rea) at (0, 0) {\textbf{Reasoning}\\Agent};
+    \node[judge, align=center] (jud) at (3.6, 0) {\textbf{Judge}\\Agent};
+
+    % Forward flow arrows with better label positioning
+    \draw[arrow] (ret.east) -- (rea.west) node[midway, above=2pt, label] {documents};
+    \draw[arrow] (rea.east) -- (jud.west) node[midway, above=2pt, label] {answer};
+
+    % Feedback loop (curved, below)
+    \draw[feedback] (jud.south) -- ++(0, -0.7) -| node[pos=0.25, below, font=\scriptsize\sffamily, feedbackred!80] {retry if score $< \tau$} (ret.south);
+
+    % Input arrow
+    \draw[arrow] (-6.0, 0) -- (ret.west);
+    \node[io, left] at (-6.0, 0) {Question};
+
+    % Output arrow
+    \draw[arrow] (jud.east) -- ++(1.4, 0);
+    \node[io, right] at (6.2, 0) {Answer};
+
+    % Score annotation - below Judge box using absolute coordinates
+    \node[font=\scriptsize\sffamily, judgeorange!90!black] at (3.6, -0.85) {score $\in [0,1]$};
+
+\end{tikzpicture}
+\caption{Self-Correcting RAG architecture. The Retrieval Agent selects retrieval strategies, the Reasoning Agent generates cited answers, and the Judge Agent evaluates quality. If the score falls below threshold $\tau$, the system retries with escalated strategies.}
+\label{fig:architecture}
+\end{figure}
+
+The process begins when the Orchestrator receives a question. It dispatches the question to the Retrieval Agent, which analyzes the query and selects an appropriate retrieval pipeline. Retrieved documents are passed to the Reasoning Agent, which generates an answer with citations. The Judge Agent evaluates the answer quality, producing a score in $[0, 1]$. If the score falls below a dynamic threshold, the Orchestrator triggers a retry with escalated strategies. This loop continues until the answer passes evaluation or maximum retries are exhausted.
+
+While our agents operate within a structured orchestration loop rather than engaging in free-form negotiation, each agent \emph{autonomously} determines its strategy based on query characteristics and attempt history. This design provides the reliability of a managed workflow with the adaptability of agent-based decision-making.
+
+We use the term ``agentic'' to denote distinct functional modules (Retrieval, Reasoning, Judging) operating in a coordinated pipeline, as opposed to multiple autonomous agents negotiating with each other in free-form dialogue. This structured approach (sometimes called an ``agentic pipeline'') provides the reliability of a managed workflow while preserving the modularity and interpretability benefits of agent-based decomposition.
+
+\begin{tcolorbox}[
+    colback=blue!3!white,
+    colframe=blue!50!black,
+    title={\small\textbf{Example: Self-Correction in Action}},
+    fonttitle=\sffamily,
+    boxrule=0.5pt,
+    arc=2pt,
+    left=4pt, right=4pt, top=2pt, bottom=2pt
+]
+\small
+\textbf{Question:} ``What was Apple's total revenue in FY2023 and how did it compare to FY2022?''
+
+\textbf{Attempt 1:}
+\begin{itemize}[nosep, leftmargin=*, topsep=1pt]
+    \item \emph{Retrieval Agent}: Selects \texttt{hybrid\_filter} with entity ``AAPL'', retrieves $k{=}10$ documents
+    \item \emph{Reasoning Agent}: Generates ``Apple's revenue in 2023 was \$394.3B.''
+    \item \emph{Judge Agent}: Score 0.4 (answer missing FY2022 comparison, incomplete)
+    \item \emph{Decision}: Score $< \tau_1 = 0.5$ $\rightarrow$ \textbf{Retry}
+\end{itemize}
+
+\textbf{Attempt 2 (Escalated):}
+\begin{itemize}[nosep, leftmargin=*, topsep=1pt]
+    \item \emph{Retrieval Agent}: Escalates to \texttt{hybrid\_filter\_rerank}, $k{=}20$, HyDE enabled
+    \item \emph{Reasoning Agent}: ``Apple's FY2023 revenue was \$383.3B, down 2.8\% from \$394.3B in FY2022.''
+    \item \emph{Judge Agent}: Score 0.85 (complete, both years present, comparison included)
+    \item \emph{Decision}: Score $\geq \tau_2 = 0.4$ $\rightarrow$ \textbf{Accept}
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{Retrieval Agent}
+\label{sec:retrieval}
+
+The Retrieval Agent is responsible for two key decisions: (1) selecting a retrieval pipeline from a set of available strategies, and (2) configuring retrieval parameters such as the number of documents to retrieve.
+
+\paragraph{Question Analysis.}
+Given an input question $q$, the Retrieval Agent first extracts features relevant to pipeline selection:
+\begin{itemize}[nosep]
+    \item \textbf{Named entities}: Company names, ticker symbols, and other domain-specific identifiers for metadata filtering (e.g., extracting ``AAPL'' from ``What was Apple's revenue?'' to filter retrieval to Apple SEC filings)
+    \item \textbf{Temporal references}: Fiscal years, quarters, and date ranges for temporal filtering (e.g., ``FY2023'' or ``Q3 2022'' to restrict to the correct reporting period)
+    \item \textbf{Question type}: Whether the question requires numerical reasoning, factual lookup, or complex multi-hop retrieval
+\end{itemize}
+
+\paragraph{Pipeline Selection.}
+Based on the extracted features, the agent selects from four retrieval pipelines:
+\begin{itemize}[nosep]
+    \item \texttt{semantic}: Dense vector similarity search
+    \item \texttt{hybrid}: Combined dense and sparse (BM25) retrieval
+    \item \texttt{hybrid\_filter}: Hybrid search with metadata filtering
+    \item \texttt{hybrid\_filter\_rerank}: Hybrid search with filtering and cross-encoder reranking
+\end{itemize}
+
+The Retrieval Agent's pipeline selection uses rule-based logic with zero LLM cost: questions containing identifiable entities (company names, ticker symbols) route to filtered pipelines, while questions requiring numerical precision route to reranking pipelines. This lightweight routing achieves comparable performance to LLM-based classification at a fraction of the computational cost, a key finding that simple heuristics can often replace expensive learned routers in financial document QA.
+
+\paragraph{Routing Heuristics.}
+The rule-based router operates as follows:
+\begin{itemize}[nosep]
+    \item If the question contains a recognized ticker symbol or company name $\rightarrow$ \texttt{hybrid\_filter} (metadata filtering)
+    \item If the question requests numerical comparison or computation $\rightarrow$ \texttt{hybrid\_filter\_rerank} (precision-focused)
+    \item If the question is open-ended or exploratory $\rightarrow$ \texttt{hybrid} (broad recall)
+    \item Default fallback $\rightarrow$ \texttt{semantic}
+\end{itemize}
+Entity recognition uses a simple gazetteer of S\&P 500 tickers plus regex patterns for fiscal year mentions. This lightweight approach adds negligible latency ($<$10ms) while achieving routing decisions that, empirically, match LLM-based classifiers on our evaluation set.
+
+\paragraph{Escalation Strategies.}
+On retry, the Retrieval Agent escalates its strategy to improve recall. Table~\ref{tab:retrieval-escalation} shows the escalation configuration:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Attempt} & \textbf{top\_k} & \textbf{initial\_k} & \textbf{HyDE} \\
+\midrule
+1 (Standard) & 10 & $3 \times$ & Off \\
+2 (Escalated) & 20 & $4 \times$ & On \\
+\bottomrule
+\end{tabular}
+\caption{Retrieval Agent escalation strategies. On retry, the agent retrieves more documents and enables Hypothetical Document Embeddings (HyDE).}
+\label{tab:retrieval-escalation}
+\end{table}
+
+\noindent These parameters reflect a conservative-to-aggressive strategy: the initial attempt uses a focused context window ($k=10$) to minimize noise, while subsequent attempts progressively expand recall. HyDE is disabled in the first attempt to avoid introducing hypothetical content when standard retrieval may suffice; it activates in later attempts specifically to bridge vocabulary mismatch when direct lexical matching fails.
+
+HyDE~\citep{gao2022precise} generates a hypothetical answer to the question, then uses its embedding to retrieve similar passages. This is particularly effective for questions where the query and relevant passages have low lexical overlap. We note that HyDE carries risk in financial domains: a hallucinated figure in the hypothetical document could bias retrieval toward passages containing similar (incorrect) values. We mitigate this by (1)~restricting HyDE to retry attempts only (after standard retrieval fails), and (2)~using HyDE primarily to capture semantic structure rather than specific numerical values.
+
+\noindent\textit{Common failure modes in financial QA that trigger escalation include:} (1)~fiscal year confusion (FY2023 vs.\ calendar 2023), (2)~subsidiary vs.\ parent company ambiguity, and (3)~table header misalignment in SEC filings. Escalated retrieval with higher $k$ and HyDE helps surface the correct context for these challenging cases.
+
+\subsection{Reasoning Agent}
+\label{sec:reasoning}
+
+The Reasoning Agent generates answers from retrieved documents using a language model. It manages prompt strategies and estimates answer confidence.
+
+\paragraph{Prompt Strategies.}
+The agent maintains three prompting strategies that vary in instruction specificity:
+\begin{itemize}[nosep]
+    \item \textbf{Standard}: Concise instructions emphasizing accuracy and citation
+    \item \textbf{Conservative}: Additional instructions to acknowledge uncertainty when evidence is weak
+    \item \textbf{Detailed}: Expanded instructions requiring step-by-step reasoning and explicit source attribution
+\end{itemize}
+
+On retry, the agent escalates from standard to conservative to detailed, progressively encouraging more careful reasoning.
+
+\paragraph{Context Formatting.}
+Retrieved documents are formatted with explicit source boundaries:
+\begin{verbatim}
+[Document 1 | Source: Apple_10K_2023.pdf]
+<content>
+[Document 2 | Source: Microsoft_10Q_Q3.pdf]
+<content>
+\end{verbatim}
+
+This formatting enables the model to attribute claims to specific sources and facilitates citation extraction.
+
+\paragraph{Confidence Estimation.}
+The agent estimates answer confidence using heuristic signals:
+\begin{itemize}[nosep]
+    \item Presence of hedging language (``may'', ``possibly'', ``uncertain'')
+    \item Refusal phrases (``cannot determine'', ``not enough information'')
+    \item Presence of specific numerical values (increases confidence)
+    \item Answer length (extremely short answers indicate low confidence)
+\end{itemize}
+
+The confidence estimate is passed to the Judge Agent to inform evaluation.
+
+\subsection{Judge Agent}
+\label{sec:judge}
+
+The Judge Agent evaluates answer quality and determines whether retry is warranted. It operates in two modes depending on whether ground truth is available.
+
+\paragraph{Evaluation Methods.}
+When a gold-standard answer is available (training or validation), the Judge uses \textit{LLM-as-Judge} evaluation:
+\begin{equation}
+    \text{score} = \text{LLM}(q, a_{\text{pred}}, a_{\text{gold}})
+\end{equation}
+The evaluator LLM rates semantic equivalence, numerical accuracy, and completeness on a 0-1 scale. For financial questions, the Judge specifically checks whether extracted numerical values (revenue, EPS, ratios) match SEC filing figures exactly; partial credit is given for correct magnitude with wrong precision.
+
+When no gold answer is available (inference), the Judge performs \textit{self-evaluation}, assessing:
+\begin{itemize}[nosep]
+    \item Internal consistency of the answer
+    \item Specificity and concreteness
+    \item Alignment with the question's requirements
+    \item \textbf{Factual grounding}: whether claims are explicitly supported by retrieved passages (detecting unsupported assertions that may indicate hallucination)
+\end{itemize}
+
+Critically, the Judge does not simply rate fluency; it performs a \textbf{grounded verification check}: for each numerical claim or factual assertion in the generated answer, the Judge verifies that a supporting span exists in the retrieved context. This is analogous to Natural Language Inference (NLI): the answer is treated as a hypothesis that must be \emph{entailed} by the retrieved evidence. Claims without explicit textual support are flagged as potentially hallucinated, reducing the score accordingly.
+
+\paragraph{Evaluation Signal Structure.}
+The Judge produces a structured assessment rather than a single scalar:
+\begin{itemize}[nosep]
+    \item \textbf{Grounding score} $\in [0,1]$: Proportion of answer claims with explicit textual support
+    \item \textbf{Completeness score} $\in [0,1]$: Whether all question components are addressed
+    \item \textbf{Numeric verification}: Binary flag from programmatic extraction and comparison
+    \item \textbf{Confidence signals}: Presence of hedging language, refusal phrases
+\end{itemize}
+The final score aggregates these signals, with numeric verification given highest weight for financial queries. This decomposition enables targeted debugging: a low grounding score suggests retrieval failure, while low completeness with high grounding suggests the Reasoning Agent needs a different prompt strategy.
+
+\paragraph{Dynamic Retry Threshold.}
+The retry threshold decreases with each attempt to balance quality and efficiency:
+\begin{equation}
+    \tau_t = \max(\tau_0 - 0.1 \times (t - 1), \tau_{\min})
+\end{equation}
+where $\tau_0 = 0.5$ is the initial threshold. With our default budget of $R=1$ retry, this yields $\tau_1 = 0.5$ and $\tau_2 = 0.4$.
+
+For our default configuration with $\tau_0 = 0.5$ and maximum 1 retry: Attempt~1 requires score $\geq 0.5$, Attempt~2 (if triggered) accepts $\geq 0.4$. These values were chosen empirically: $\tau_0 = 0.5$ reflects a moderate quality bar (scores above 0.5 typically indicate coherent, grounded answers), while the 0.1 decrement per attempt provides graceful degradation under retry pressure.
+
+\paragraph{Retry Decision.}
+The Judge Agent \emph{autonomously} triggers retry when all of the following conditions hold:
+\begin{enumerate}[nosep]
+    \item \textbf{Quality insufficient}: Current score $< \tau_t$ (below dynamic threshold)
+    \item \textbf{Budget available}: Remaining retries $> 0$ (default max retries = 1)
+    \item \textbf{Improvement possible}: Either this is the first attempt, OR the current score improved over the previous attempt (to prevent infinite loops on inherently unanswerable questions)
+\end{enumerate}
+This three-part criterion ensures the system retries when improvement is both needed and feasible, while avoiding wasted computation on questions where escalation cannot help. The Judge makes this decision without human intervention, embodying the ``autonomous decision-making'' that distinguishes agentic systems from simple pipelines.
+
+\paragraph{Judge Reliability Considerations.}
+We acknowledge that LLM-based evaluation introduces potential failure modes. The Judge may exhibit: (1)~\emph{false confidence} on plausible-sounding but factually incorrect answers, particularly when errors involve subtle numerical discrepancies; (2)~\emph{over-criticism} of correct but tersely-worded responses, triggering unnecessary retries. We mitigate these risks through the programmatic numeric verification layer, which catches exact-match failures independent of LLM judgment. The dynamic threshold schedule ($\tau_t$ decreasing per attempt) also provides a natural ceiling on retry attempts, preventing infinite loops from miscalibrated scores. Future work could explore ensemble judge strategies or fine-tuned smaller verifier models~\citep{zhuge2024agent} to further improve reliability.
+
+\subsection{Orchestrator and Feedback Loop}
+\label{sec:orchestrator}
+
+The Orchestrator coordinates agent execution and manages the self-correction loop.
+
+\paragraph{Processing Pipeline.}
+Algorithm~\ref{alg:orchestrator} describes the main processing loop:
+
+\begin{algorithm}[h]
+\caption{Self-Correcting RAG Orchestrator. Parameter $R$ specifies maximum \emph{retries}, yielding up to $R+1$ total attempts.}
+\label{alg:orchestrator}
+\begin{algorithmic}[1]
+\REQUIRE Question $q$, max retries $R$
+\STATE $\text{best\_answer} \gets \emptyset$, $\text{best\_score} \gets 0$
+\STATE $\text{attempt} \gets 1$
+\WHILE{$\text{attempt} \leq R + 1$}
+    \STATE $\text{docs} \gets \text{RetrievalAgent.retrieve}(q, \text{attempt})$
+    \STATE $\text{answer} \gets \text{ReasoningAgent.generate}(q, \text{docs}, \text{attempt})$
+    \STATE $\text{score} \gets \text{JudgeAgent.evaluate}(q, \text{answer})$
+    \IF{$\text{score} > \text{best\_score}$}
+        \STATE $\text{best\_answer} \gets \text{answer}$
+        \STATE $\text{best\_score} \gets \text{score}$
+    \ENDIF
+    \IF{$\neg \text{JudgeAgent.should\_retry}(\text{score}, \text{attempt})$}
+        \STATE \textbf{break}
+    \ENDIF
+    \STATE $\text{attempt} \gets \text{attempt} + 1$
+\ENDWHILE
+\RETURN $\text{best\_answer}$, $\text{best\_score}$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Best Answer Tracking.}
+The Orchestrator maintains the best answer across all attempts, returning it even if later attempts produce lower scores. This prevents degradation when escalation strategies retrieve noisier context.
+
+\paragraph{Decision Logging.}
+All agent decisions are logged for analysis:
+\begin{itemize}[nosep]
+    \item Pipeline selected and retrieval parameters
+    \item Number of documents retrieved and reranked
+    \item Prompt strategy used
+    \item Judge score and retry decision
+    \item Total attempts and time per attempt
+\end{itemize}
+
+This logging enables post-hoc analysis of failure modes and strategy effectiveness across domains.
+
+\begin{tcolorbox}[
+    colback=gray!5!white,
+    colframe=gray!50!black,
+    title={\small\textbf{Example: Audit Log Entry}},
+    fonttitle=\sffamily,
+    boxrule=0.5pt,
+    arc=2pt,
+    left=4pt, right=4pt, top=2pt, bottom=2pt
+]
+\small
+\texttt{\{} \\
+\quad \texttt{"question\_id": "FB-Q127",} \\
+\quad \texttt{"question": "What was Apple's FY2023 revenue?",} \\
+\quad \texttt{"attempt": 1,} \\
+\quad \texttt{"retrieval": \{} \\
+\quad\quad \texttt{"pipeline": "hybrid\_filter",} \\
+\quad\quad \texttt{"entity\_filter": "AAPL",} \\
+\quad\quad \texttt{"top\_k": 10,} \\
+\quad\quad \texttt{"docs\_retrieved": ["Apple\_10K\_2023.pdf:p42"]} \\
+\quad \texttt{\},} \\
+\quad \texttt{"reasoning": \{} \\
+\quad\quad \texttt{"strategy": "standard",} \\
+\quad\quad \texttt{"answer": "Apple's FY2023 revenue was \$394.3B."} \\
+\quad \texttt{\},} \\
+\quad \texttt{"judge": \{} \\
+\quad\quad \texttt{"score": 0.40,} \\
+\quad\quad \texttt{"grounding\_check": "PARTIAL - missing YoY comparison",} \\
+\quad\quad \texttt{"numeric\_verified": true,} \\
+\quad\quad \texttt{"decision": "RETRY"} \\
+\quad \texttt{\},} \\
+\quad \texttt{"latency\_ms": 4200} \\
+\texttt{\}}
+\end{tcolorbox}
+
+\subsection{Design for Trustworthiness}
+\label{sec:trustworthiness}
+
+Our multi-agent architecture incorporates several features aligned with responsible AI principles for high-stakes domains:
+
+\paragraph{Audit Trails.}
+All agent decisions are logged with timestamps, confidence scores, and reasoning traces. This enables post-hoc analysis of failure modes and supports regulatory compliance requirements in financial applications where decision provenance matters.
+
+\paragraph{Uncertainty Signals.}
+The Judge Agent's quality score serves as an uncertainty estimate: low scores indicate the system recognizes potential errors, triggering self-correction rather than returning unreliable answers. The final score is available to downstream applications for confidence-aware decision-making.
+
+\paragraph{Human Oversight Points.}
+The explicit agent boundaries create natural intervention points. A human reviewer can inspect retrieved documents before generation, or override the Judge's retry decision. This transparency supports human-in-the-loop deployment required in regulated industries.
+
+\paragraph{Future Extensions.}
+The Judge Agent's evaluation framework can be extended to check domain-specific compliance requirements, for example, detecting whether answers rely on outdated filings or potentially biased data sources. Such extensions would further align the system with responsible AI requirements in regulated financial applications.

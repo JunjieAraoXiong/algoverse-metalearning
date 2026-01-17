@@ -1,0 +1,172 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{lewis2020retrieval}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\citation{yao2022react,shinn2023reflexion}
+\citation{madaan2023self}
+\citation{shinn2023reflexion}
+\citation{madaan2023self}
+\citation{singh2025agenticrag}
+\citation{shinn2023reflexion}
+\citation{madaan2023self}
+\citation{asai2024selfrag}
+\citation{yan2024corrective}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{2}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Self-Correction in Language Models.}{2}{section*.1}\protected@file@percent }
+\citation{ozer2024mar}
+\citation{jeong2024adaptive}
+\citation{zhang2025ragrouter}
+\citation{lewis2020retrieval}
+\citation{chen2024bge}
+\citation{nogueira2019passage}
+\citation{gao2022precise}
+\citation{islam2023financebench}
+\citation{zheng2023judging}
+\citation{liu2023geval}
+\@writefile{toc}{\contentsline {paragraph}{Adaptive Retrieval and Query Routing.}{3}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Document QA and Financial Benchmarks.}{3}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{LLM-as-Judge and Verification.}{3}{section*.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Self-Correcting RAG architecture. The Retrieval Agent selects retrieval strategies, the Reasoning Agent generates cited answers, and the Judge Agent evaluates quality. If the score falls below threshold $\tau $, the system retries with escalated strategies.}}{4}{figure.1}\protected@file@percent }
+\newlabel{fig:architecture}{{1}{4}{Self-Correcting RAG architecture. The Retrieval Agent selects retrieval strategies, the Reasoning Agent generates cited answers, and the Judge Agent evaluates quality. If the score falls below threshold $\tau $, the system retries with escalated strategies}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method: Self-Correcting RAG Architecture}{4}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{4}{Method: Self-Correcting RAG Architecture}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}System Overview}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:overview}{{3.1}{4}{System Overview}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Retrieval Agent}{5}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:retrieval}{{3.2}{5}{Retrieval Agent}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Question Analysis.}{5}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Pipeline Selection.}{5}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Routing Heuristics.}{5}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Escalation Strategies.}{5}{section*.8}\protected@file@percent }
+\citation{gao2022precise}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Retrieval Agent escalation strategies. On each retry, the agent retrieves more documents and optionally enables Hypothetical Document Embeddings (HyDE).}}{6}{table.1}\protected@file@percent }
+\newlabel{tab:retrieval-escalation}{{1}{6}{Retrieval Agent escalation strategies. On each retry, the agent retrieves more documents and optionally enables Hypothetical Document Embeddings (HyDE)}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Reasoning Agent}{6}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:reasoning}{{3.3}{6}{Reasoning Agent}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Prompt Strategies.}{6}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Context Formatting.}{6}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Confidence Estimation.}{6}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Judge Agent}{7}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:judge}{{3.4}{7}{Judge Agent}{subsection.3.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Evaluation Methods.}{7}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation Signal Structure.}{7}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Dynamic Retry Threshold.}{7}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Retry Decision.}{7}{section*.15}\protected@file@percent }
+\citation{zhuge2024agent}
+\@writefile{toc}{\contentsline {paragraph}{Judge Reliability Considerations.}{8}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Orchestrator and Feedback Loop}{8}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:orchestrator}{{3.5}{8}{Orchestrator and Feedback Loop}{subsection.3.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Processing Pipeline.}{8}{section*.17}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Self-Correcting RAG Orchestrator. Parameter $R$ specifies maximum \emph  {retries}, yielding up to $R+1$ total attempts.}}{8}{algorithm.1}\protected@file@percent }
+\newlabel{alg:orchestrator}{{1}{8}{Processing Pipeline}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Best Answer Tracking.}{8}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Decision Logging.}{8}{section*.19}\protected@file@percent }
+\citation{islam2023financebench}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Design for Trustworthiness}{9}{subsection.3.6}\protected@file@percent }
+\newlabel{sec:trustworthiness}{{3.6}{9}{Design for Trustworthiness}{subsection.3.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Audit Trails.}{9}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Uncertainty Signals.}{9}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Human Oversight Points.}{9}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Future Extensions.}{9}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{9}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{9}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Datasets}{9}{subsection.4.1}\protected@file@percent }
+\citation{jin2019pubmedqa}
+\citation{hendrycks2021cuad}
+\citation{zheng2023judging,liu2023geval}
+\citation{dubois2024alpacaeval}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Evaluation datasets spanning three high-stakes domains.}}{10}{table.2}\protected@file@percent }
+\newlabel{tab:datasets}{{2}{10}{Evaluation datasets spanning three high-stakes domains}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Finance-Specific Challenges}{10}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Baselines}{10}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Evaluation Metrics}{10}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Semantic Similarity.}{10}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Numeric Verification.}{10}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{LLM-as-Judge Score.}{10}{section*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Error Rate.}{11}{section*.27}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Lazarus Rate (Correction Rate).}{11}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Judge Agent Evaluation.}{11}{section*.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Finance-Specific Analysis.}{11}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Implementation Details}{11}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Models.}{11}{section*.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Retrieval.}{11}{section*.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Agent Configuration.}{11}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Retry Budget.}{11}{section*.34}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Experimental Setup}{11}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Experiment 1: Single-Pass vs. Multi-Agent.}{11}{section*.35}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Experiment 2: Ablation Study.}{11}{section*.36}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Experiment 3: Self-Correction Analysis.}{12}{section*.37}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Experiment 4: Routing Comparison.}{12}{section*.38}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{12}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{12}{Results}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}FinanceBench Results (Primary Evaluation)}{12}{subsection.5.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces FinanceBench results comparing single-pass RAG against Self-Correcting RAG. Numeric Acc.\ measures exact-match accuracy on questions requiring numerical extraction or calculation.}}{12}{table.3}\protected@file@percent }
+\newlabel{tab:financebench-main}{{3}{12}{FinanceBench results comparing single-pass RAG against Self-Correcting RAG. Numeric Acc.\ measures exact-match accuracy on questions requiring numerical extraction or calculation}{table.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Performance by Question Type.}{12}{section*.39}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces FinanceBench performance by question type. Metrics-generated questions (numerical extraction) show largest improvement from self-correction. Num.\ Acc.\ reports numerical accuracy for the Multi-Agent configuration.}}{12}{table.4}\protected@file@percent }
+\newlabel{tab:financebench-breakdown}{{4}{12}{FinanceBench performance by question type. Metrics-generated questions (numerical extraction) show largest improvement from self-correction. Num.\ Acc.\ reports numerical accuracy for the Multi-Agent configuration}{table.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Numerical Reasoning Gap.}{12}{section*.40}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Temporal Reasoning.}{12}{section*.41}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Ablation Study}{13}{subsection.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Ablation study on FinanceBench. Each row removes one component.}}{13}{table.5}\protected@file@percent }
+\newlabel{tab:ablation}{{5}{13}{Ablation study on FinanceBench. Each row removes one component}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Self-Correction Analysis}{13}{subsection.5.3}\protected@file@percent }
+\newlabel{sec:correction-analysis}{{5.3}{13}{Self-Correction Analysis}{subsection.5.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Correction Flow.}{13}{section*.42}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Self-correction flow analysis on FinanceBench. The ``Lazarus Rate'' measures what percentage of initially incorrect answers were successfully corrected through retry---a direct measure of system resilience.}}{13}{table.6}\protected@file@percent }
+\newlabel{tab:correction-flow}{{6}{13}{Self-correction flow analysis on FinanceBench. The ``Lazarus Rate'' measures what percentage of initially incorrect answers were successfully corrected through retry---a direct measure of system resilience}{table.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Judge Discrimination.}{13}{section*.43}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Disproportionate Numeric Gain.}{14}{section*.44}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Disproportionate improvement on numerical questions. Self-correction shows modest semantic similarity gains but substantial numeric accuracy improvement, demonstrating it specifically fixes hard numerical extraction problems.}}{14}{table.7}\protected@file@percent }
+\newlabel{tab:disproportionate-gain}{{7}{14}{Disproportionate improvement on numerical questions. Self-correction shows modest semantic similarity gains but substantial numeric accuracy improvement, demonstrating it specifically fixes hard numerical extraction problems}{table.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Life of a Question: Correction Flow Visualization}{14}{subsection.5.4}\protected@file@percent }
+\newlabel{sec:sankey}{{5.4}{14}{Life of a Question: Correction Flow Visualization}{subsection.5.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Correction flow visualization (``Life of a Question''). Starting from Attempt~1 outcomes, questions flow through the Judge Agent which decides whether to retry. The \textbf  {Lazarus Rate} (XX\%) represents the proportion of initially incorrect answers successfully corrected---the core measure of system resilience.}}{14}{figure.2}\protected@file@percent }
+\newlabel{fig:correction-sankey}{{2}{14}{Correction flow visualization (``Life of a Question''). Starting from Attempt~1 outcomes, questions flow through the Judge Agent which decides whether to retry. The \textbf {Lazarus Rate} (XX\%) represents the proportion of initially incorrect answers successfully corrected---the core measure of system resilience}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Forensic Case Study: Judge Semantic Understanding}{14}{subsection.5.5}\protected@file@percent }
+\newlabel{sec:case-study}{{5.5}{14}{Forensic Case Study: Judge Semantic Understanding}{subsection.5.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Routing Efficiency Validation}{15}{subsection.5.6}\protected@file@percent }
+\newlabel{sec:routing-validation}{{5.6}{15}{Routing Efficiency Validation}{subsection.5.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Routing efficiency comparison. Rule-based routing achieves comparable accuracy with zero latency overhead and no API cost.}}{15}{table.8}\protected@file@percent }
+\newlabel{tab:routing-comparison}{{8}{15}{Routing efficiency comparison. Rule-based routing achieves comparable accuracy with zero latency overhead and no API cost}{table.8}{}}
+\@writefile{toc}{\contentsline {paragraph}{Routing Decision Distribution.}{15}{section*.45}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Robustness Validation: Cross-Domain Generalization}{15}{subsection.5.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Cross-domain validation. Same architecture achieves consistent improvements across fundamentally different document types.}}{16}{table.9}\protected@file@percent }
+\newlabel{tab:cross-domain}{{9}{16}{Cross-domain validation. Same architecture achieves consistent improvements across fundamentally different document types}{table.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}Failure Mode Analysis}{16}{subsection.5.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.9}Efficiency}{16}{subsection.5.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Deployment Context.}{16}{section*.46}\protected@file@percent }
+\citation{zhuge2024agent}
+\bibdata{references}
+\bibcite{asai2024selfrag}{{1}{2024}{{Asai et~al.}}{{Asai, Wu, Wang, Sil, and Hajishirzi}}}
+\bibcite{chen2024bge}{{2}{2024}{{Chen et~al.}}{{Chen, Xiao, Zhang, Luo, Lian, and Liu}}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{17}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{17}{Conclusion}{section.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Alignment with Responsible AI.}{17}{section*.47}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{17}{section*.48}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Future Work.}{17}{section*.49}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Broader Impact.}{17}{section*.50}\protected@file@percent }
+\bibcite{gao2022precise}{{3}{2022}{{Gao et~al.}}{{Gao, Ma, Lin, and Callan}}}
+\bibcite{hendrycks2021cuad}{{4}{2021}{{Hendrycks et~al.}}{{Hendrycks, Burns, Chen, and Ball}}}
+\bibcite{islam2023financebench}{{5}{2023}{{Islam et~al.}}{{Islam, Nguyen, Faruq, Narayanan, et~al.}}}
+\bibcite{jeong2024adaptive}{{6}{2024}{{Jeong et~al.}}{{Jeong, Baek, Cho, Hwang, and Park}}}
+\bibcite{jin2019pubmedqa}{{7}{2019}{{Jin et~al.}}{{Jin, Dhingra, Liu, Cohen, and Lu}}}
+\bibcite{lewis2020retrieval}{{8}{2020}{{Lewis et~al.}}{{Lewis, Perez, Piktus, Petroni, Karpukhin, Goyal, K{\"u}ttler, Lewis, Yih, Rockt{\"a}schel, et~al.}}}
+\bibcite{alpacaeval2023}{{9}{2023}{{Li et~al.}}{{Li, Zhang, Dubois, Taori, Gulrajani, Guestrin, Liang, and Hashimoto}}}
+\bibcite{liu2023geval}{{10}{2023}{{Liu et~al.}}{{Liu, Iter, Xu, Wang, Xu, and Zhu}}}
+\bibcite{madaan2023self}{{11}{2023}{{Madaan et~al.}}{{Madaan, Tandon, Gupta, Hallinan, Gao, Wiegreffe, Alon, Dziri, Prabhumoye, Yang, et~al.}}}
+\bibcite{nogueira2019passage}{{12}{2019}{{Nogueira \& Cho}}{{Nogueira and Cho}}}
+\bibcite{ozer2024mar}{{13}{2024}{{Ozer et~al.}}{{Ozer, Choi, Kim, and Cho}}}
+\bibcite{shinn2023reflexion}{{14}{2023}{{Shinn et~al.}}{{Shinn, Cassano, Gopinath, Narasimhan, and Yao}}}
+\bibcite{singh2025agenticrag}{{15}{2025}{{Singh et~al.}}{{Singh, Ehtesham, Kumar, and Thakur}}}
+\bibcite{yan2024corrective}{{16}{2024}{{Yan et~al.}}{{Yan, Gu, Zhu, and Ling}}}
+\bibcite{yao2022react}{{17}{2022}{{Yao et~al.}}{{Yao, Zhao, Yu, Du, Shafran, Narasimhan, and Cao}}}
+\bibcite{zhang2025ragrouter}{{18}{2025}{{Zhang et~al.}}{{Zhang, Dong, Li, and Chen}}}
+\bibcite{zheng2023judging}{{19}{2023}{{Zheng et~al.}}{{Zheng, Chiang, Sheng, Zhuang, Wu, Zhuang, Lin, Li, Li, Xing, et~al.}}}
+\bibcite{zhuge2024agent}{{20}{2024}{{Zhuge et~al.}}{{Zhuge, Zhao, Ashley, Wang, Khizbullin, Xiong, Liu, Chang, Krishnamoorthi, Tian, Shi, Chandra, and Schmidhuber}}}
+\bibstyle{iclr2026_conference}
+\gdef \@abspage@last{19}

@@ -1,0 +1,140 @@
+\begin{thebibliography}{20}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Asai et~al.(2024)Asai, Wu, Wang, Sil, and Hajishirzi]{asai2024selfrag}
+Akari Asai, Zeqiu Wu, Yizhong Wang, Avirup Sil, and Hannaneh Hajishirzi.
+\newblock Self-rag: Learning to retrieve, generate, and critique through
+  self-reflection.
+\newblock \emph{arXiv preprint arXiv:2310.11511}, 2024.
+
+\bibitem[Chen et~al.(2024)Chen, Xiao, Zhang, Luo, Lian, and Liu]{chen2024bge}
+Jianlv Chen, Shitao Xiao, Peitian Zhang, Kun Luo, Defu Lian, and Zheng Liu.
+\newblock Bge m3-embedding: Multi-lingual, multi-functionality,
+  multi-granularity text embeddings through self-knowledge distillation.
+\newblock \emph{arXiv preprint arXiv:2402.03216}, 2024.
+
+\bibitem[Gao et~al.(2022)Gao, Ma, Lin, and Callan]{gao2022precise}
+Luyu Gao, Xueguang Ma, Jimmy Lin, and Jamie Callan.
+\newblock Precise zero-shot dense retrieval without relevance labels.
+\newblock \emph{arXiv preprint arXiv:2212.10496}, 2022.
+
+\bibitem[Hendrycks et~al.(2021)Hendrycks, Burns, Chen, and
+  Ball]{hendrycks2021cuad}
+Dan Hendrycks, Collin Burns, Anya Chen, and Spencer Ball.
+\newblock Cuad: An expert-annotated nlp dataset for legal contract review.
+\newblock \emph{arXiv preprint arXiv:2103.06268}, 2021.
+
+\bibitem[Islam et~al.(2023)Islam, Nguyen, Faruq, Narayanan,
+  et~al.]{islam2023financebench}
+Pranab Islam, Anand Nguyen, Samir Faruq, Maneesh Narayanan, et~al.
+\newblock Financebench: A new benchmark for financial question answering.
+\newblock \emph{arXiv preprint arXiv:2311.11944}, 2023.
+
+\bibitem[Jeong et~al.(2024)Jeong, Baek, Cho, Hwang, and
+  Park]{jeong2024adaptive}
+Soyeong Jeong, Jinheon Baek, Sukmin Cho, Sung~Ju Hwang, and Jong~C Park.
+\newblock Adaptive-rag: Learning to adapt retrieval-augmented large language
+  models through question complexity.
+\newblock \emph{arXiv preprint arXiv:2403.14403}, 2024.
+
+\bibitem[Jin et~al.(2019)Jin, Dhingra, Liu, Cohen, and Lu]{jin2019pubmedqa}
+Qiao Jin, Bhuwan Dhingra, Zhengping Liu, William~W Cohen, and Xinghua Lu.
+\newblock Pubmedqa: A dataset for biomedical research question answering.
+\newblock \emph{arXiv preprint arXiv:1909.06146}, 2019.
+
+\bibitem[Lewis et~al.(2020)Lewis, Perez, Piktus, Petroni, Karpukhin, Goyal,
+  K{\"u}ttler, Lewis, Yih, Rockt{\"a}schel, et~al.]{lewis2020retrieval}
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir
+  Karpukhin, Naman Goyal, Heinrich K{\"u}ttler, Mike Lewis, Wen-tau Yih, Tim
+  Rockt{\"a}schel, et~al.
+\newblock Retrieval-augmented generation for knowledge-intensive nlp tasks.
+\newblock \emph{Advances in Neural Information Processing Systems},
+  33:\penalty0 9459--9474, 2020.
+
+\bibitem[Li et~al.(2023)Li, Zhang, Dubois, Taori, Gulrajani, Guestrin, Liang,
+  and Hashimoto]{alpacaeval2023}
+Xuechen Li, Tianyi Zhang, Yann Dubois, Rohan Taori, Ishaan Gulrajani, Carlos
+  Guestrin, Percy Liang, and Tatsunori~B. Hashimoto.
+\newblock Alpacaeval: An automatic evaluator for instruction-following language
+  models.
+\newblock \url{https://github.com/tatsu-lab/alpaca_eval}, 2023.
+\newblock Achieves Spearman 0.98 correlation with aggregated human preferences.
+
+\bibitem[Liu et~al.(2023)Liu, Iter, Xu, Wang, Xu, and Zhu]{liu2023geval}
+Yang Liu, Dan Iter, Yichong Xu, Shuohang Wang, Ruochen Xu, and Chenguang Zhu.
+\newblock G-eval: Nlg evaluation using gpt-4 with better human alignment.
+\newblock \emph{arXiv preprint arXiv:2303.16634}, 2023.
+
+\bibitem[Madaan et~al.(2023)Madaan, Tandon, Gupta, Hallinan, Gao, Wiegreffe,
+  Alon, Dziri, Prabhumoye, Yang, et~al.]{madaan2023self}
+Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao, Sarah
+  Wiegreffe, Uri Alon, Nouha Dziri, Shrimai Prabhumoye, Yiming Yang, et~al.
+\newblock Self-refine: Iterative refinement with self-feedback.
+\newblock \emph{Advances in Neural Information Processing Systems}, 36, 2023.
+
+\bibitem[Nogueira \& Cho(2019)Nogueira and Cho]{nogueira2019passage}
+Rodrigo Nogueira and Kyunghyun Cho.
+\newblock Passage re-ranking with bert.
+\newblock \emph{arXiv preprint arXiv:1901.04085}, 2019.
+
+\bibitem[Ozer et~al.(2024)Ozer, Choi, Kim, and Cho]{ozer2024mar}
+Serafettin Ozer, Seungone Choi, Seonghyeon Kim, and Hyunwoo~J. Cho.
+\newblock Mar: Multi-agent reflexion for llm reasoning.
+\newblock \emph{arXiv preprint arXiv:2512.20845}, 2024.
+\newblock Demonstrates multi-agent critique outperforms single-agent
+  self-reflection.
+
+\bibitem[Shinn et~al.(2023)Shinn, Cassano, Gopinath, Narasimhan, and
+  Yao]{shinn2023reflexion}
+Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik Narasimhan, and Shunyu
+  Yao.
+\newblock Reflexion: Language agents with verbal reinforcement learning.
+\newblock \emph{Advances in Neural Information Processing Systems}, 36, 2023.
+
+\bibitem[Singh et~al.(2025)Singh, Ehtesham, Kumar, and
+  Thakur]{singh2025agenticrag}
+Aditi Singh, Abul Ehtesham, Saket Kumar, and Tala Thakur.
+\newblock Agentic retrieval-augmented generation: A survey on agentic rag.
+\newblock \emph{arXiv preprint arXiv:2501.09136}, 2025.
+\newblock Comprehensive survey positioning agentic approaches in RAG.
+
+\bibitem[Yan et~al.(2024)Yan, Gu, Zhu, and Ling]{yan2024corrective}
+Shi-Qi Yan, Jia-Chen Gu, Yun Zhu, and Zhen-Hua Ling.
+\newblock Corrective retrieval augmented generation.
+\newblock \emph{arXiv preprint arXiv:2401.15884}, 2024.
+
+\bibitem[Yao et~al.(2022)Yao, Zhao, Yu, Du, Shafran, Narasimhan, and
+  Cao]{yao2022react}
+Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan,
+  and Yuan Cao.
+\newblock React: Synergizing reasoning and acting in language models.
+\newblock \emph{arXiv preprint arXiv:2210.03629}, 2022.
+
+\bibitem[Zhang et~al.(2025)Zhang, Dong, Li, and Chen]{zhang2025ragrouter}
+Hansi Zhang, Hailin Dong, Yujia Li, and Zhiyuan Chen.
+\newblock Ragrouter: Routing queries across heterogeneous rag systems.
+\newblock \emph{arXiv preprint arXiv:2505.23052}, 2025.
+\newblock Query routing to select among multiple RAG systems.
+
+\bibitem[Zheng et~al.(2023)Zheng, Chiang, Sheng, Zhuang, Wu, Zhuang, Lin, Li,
+  Li, Xing, et~al.]{zheng2023judging}
+Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao
+  Zhuang, Zi~Lin, Zhuohan Li, Dacheng Li, Eric Xing, et~al.
+\newblock Judging llm-as-a-judge with mt-bench and chatbot arena.
+\newblock \emph{Advances in Neural Information Processing Systems}, 36, 2023.
+
+\bibitem[Zhuge et~al.(2024)Zhuge, Zhao, Ashley, Wang, Khizbullin, Xiong, Liu,
+  Chang, Krishnamoorthi, Tian, Shi, Chandra, and Schmidhuber]{zhuge2024agent}
+Mingchen Zhuge, Changsheng Zhao, Dylan Ashley, Wenyi Wang, Dmitrii Khizbullin,
+  Yunyang Xiong, Zechun Liu, Ernie Chang, Raghuraman Krishnamoorthi, Yuandong
+  Tian, Yangyang Shi, Vikas Chandra, and J{\"u}rgen Schmidhuber.
+\newblock Agent-as-a-judge: Evaluate agents with agents.
+\newblock \emph{arXiv preprint arXiv:2410.10934}, 2024.
+\newblock Achieves 90\% human agreement vs 60\% for standard LLM judges on
+  complex tasks.
+
+\end{thebibliography}

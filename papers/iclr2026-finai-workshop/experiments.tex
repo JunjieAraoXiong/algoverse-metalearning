@@ -1,0 +1,115 @@
+% Experiments Section for Self-Correcting RAG Paper
+% FINAI@ICLR 2026 Workshop
+
+\section{Experiments}
+\label{sec:experiments}
+
+We evaluate Self-Correcting RAG across three domains to assess cross-domain generalization and the impact of self-correction.
+
+\subsection{Datasets}
+
+We select benchmarks spanning distinct document types and reasoning requirements:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llcl}
+\toprule
+\textbf{Dataset} & \textbf{Domain} & \textbf{Questions} & \textbf{Task} \\
+\midrule
+FinanceBench & Finance & 150 & SEC filing QA \\
+PubMedQA & Medical & 1,000 & Biomedical yes/no/maybe \\
+CUAD & Legal & 500+ & Contract clause extraction \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation datasets spanning three high-stakes domains.}
+\label{tab:datasets}
+\end{table}
+
+\textbf{FinanceBench}~\citep{islam2023financebench} is our \emph{primary evaluation benchmark}, containing questions about publicly traded companies requiring extraction and reasoning over SEC 10-K and 10-Q filings. Notably, 66\% of FinanceBench questions require numerical calculations (extracting values from tables and performing arithmetic), making this benchmark particularly challenging for LLMs, which are known to struggle with precise numerical reasoning even when retrieval succeeds. Questions span three categories: \emph{metrics-generated} (numerical calculations like revenue growth rates), \emph{domain-relevant} (qualitative analysis of risk factors), and \emph{novel-generated} (complex multi-step reasoning). This diversity tests the full range of financial document QA challenges.
+
+\textbf{Generalization Benchmarks.} Financial AI systems must handle heterogeneous document types, from SEC filings to analyst reports to legal contracts. To validate architectural robustness under such distribution shifts, we evaluate on PubMedQA~\citep{jin2019pubmedqa} (biomedical yes/no/maybe reasoning over research abstracts) and CUAD~\citep{hendrycks2021cuad} (legal contract clause extraction). Success across these fundamentally different domains, without architecture modifications, demonstrates the self-correction mechanism is not overfit to financial document characteristics.
+
+\subsection{Finance-Specific Challenges}
+
+FinanceBench questions present three challenges that motivate our adaptive approach:
+\begin{itemize}[nosep]
+    \item \textbf{Numerical Precision}: Metrics-generated questions require exact extraction and calculation from financial tables (e.g., ``What was Apple's gross margin in FY2023?'')
+    \item \textbf{Temporal Context}: Questions often specify fiscal periods that must be resolved to specific filing dates and sections
+    \item \textbf{Multi-Document Reasoning}: Novel-generated questions may require synthesizing information across multiple 10-K/10-Q filings
+\end{itemize}
+These challenges explain why single-pass retrieval frequently fails and self-correction provides significant value.
+
+\subsection{Baselines}
+
+We compare Self-Correcting RAG against single-pass baselines using the same retrieval and generation components:
+
+\begin{itemize}[nosep]
+    \item \textbf{Semantic}: Dense retrieval with BGE-large embeddings
+    \item \textbf{Hybrid}: Combined dense and BM25 sparse retrieval
+    \item \textbf{Hybrid + Filter}: Hybrid retrieval with metadata filtering (company, year)
+    \item \textbf{Hybrid + Filter + Rerank}: Full pipeline with cross-encoder reranking
+\end{itemize}
+
+All baselines use a single retrieval-generation pass with no feedback or retry.
+
+\subsection{Evaluation Metrics}
+
+\paragraph{Semantic Similarity.}
+We compute cosine similarity between generated and gold answers using sentence-transformers (\texttt{all-MiniLM-L6-v2}). This captures semantic equivalence beyond exact match.
+
+\paragraph{Numeric Verification.}
+For FinanceBench questions involving numerical answers, we extract and compare numeric values, computing the percentage of correctly extracted figures. This penalizes numeric hallucinations.
+
+\paragraph{LLM-as-Judge Score.}
+When gold answers are available, we use GPT-4o-mini as a judge to rate answer quality on a 0-1 scale, following established LLM-as-Judge methodology~\citep{zheng2023judging,liu2023geval} validated at scale by AlpacaEval~\citep{dubois2024alpacaeval}. Given that 66\% of FinanceBench questions require numerical calculations, we augment automatic evaluation with programmatic numeric verification to catch magnitude errors that language models often miss.
+
+\paragraph{Error Rate.}
+We report the percentage of questions where the system fails to produce an answer (API errors, timeouts, or explicit refusals).
+
+\paragraph{Lazarus Rate (Correction Rate).}
+To quantify self-correction effectiveness, we introduce the \textbf{Lazarus Rate}: the percentage of initially incorrect answers that are successfully corrected through retry. Formally:
+\[
+\text{Lazarus Rate} = \frac{|\{q : \text{wrong}_1(q) \land \text{correct}_2(q)\}|}{|\{q : \text{wrong}_1(q)\}|}
+\]
+where $\text{wrong}_1(q)$ indicates question $q$ was answered incorrectly on Attempt~1, and $\text{correct}_2(q)$ indicates it was corrected on Attempt~2. This metric directly measures system \emph{resilience}---the ability to recover from initial failures---which is the core value proposition of self-correction.
+
+\paragraph{Judge Agent Evaluation.}
+We evaluate the Judge Agent as a binary classifier (RETRY vs.\ ACCEPT) using standard metrics:
+\begin{itemize}[nosep]
+    \item \textbf{True Positive Rate}: $P(\text{RETRY} | \text{wrong})$---correctly flagging incorrect answers
+    \item \textbf{False Positive Rate}: $P(\text{RETRY} | \text{correct})$---unnecessarily flagging correct answers
+    \item \textbf{Precision}: $P(\text{wrong} | \text{RETRY})$---proportion of flagged answers that were actually wrong
+\end{itemize}
+High TPR ensures most failures trigger retry; low FPR avoids unnecessary latency overhead on correct answers.
+
+\paragraph{Finance-Specific Analysis.}
+For FinanceBench, we additionally report performance broken down by question type (metrics-generated, domain-relevant, novel-generated) and by reasoning requirement (numerical reasoning, information extraction, logical reasoning). This granular analysis reveals which financial QA sub-tasks benefit most from self-correction.
+
+\subsection{Implementation Details}
+
+\paragraph{Models.}
+We use GPT-4o-mini as the primary generation model for its balance of quality and cost. For comparison, we include Llama-3.1-70B-Instruct served via vLLM on 8$\times$A100 GPUs.
+
+\paragraph{Retrieval.}
+Documents are chunked with 512-token windows and 50-token overlap. We use BGE-large-en-v1.5 embeddings stored in ChromaDB. The reranker is BGE-reranker-large. Default retrieval returns $k=10$ documents, with initial candidate pool of $3k$.
+
+\paragraph{Agent Configuration.}
+The Retrieval Agent escalates from standard ($k=10$) to escalated ($k=20$ with HyDE enabled). The Reasoning Agent escalates from standard to conservative prompts. The Judge Agent uses threshold $\tau=0.5$ for Attempt~1, decreasing to $\tau=0.4$ for Attempt~2.
+
+\paragraph{Retry Budget.}
+We set maximum retries to 1 (i.e., up to 2 total attempts) to balance improvement potential against latency and cost. Analysis of retry frequency and improvement is provided in Section~\ref{sec:results}.
+
+\subsection{Experimental Setup}
+
+\paragraph{Experiment 1: Single-Pass vs. Multi-Agent.}
+We compare the best single-pass baseline (Hybrid + Filter + Rerank) against Self-Correcting RAG with one retry allowed. This isolates the impact of the self-correction loop.
+
+\paragraph{Experiment 2: Ablation Study.}
+We ablate key components: (a) Multi-Agent without Judge (no retry), (b) Multi-Agent without Retrieval Agent routing (fixed pipeline), (c) Full system.
+
+\paragraph{Experiment 3: Self-Correction Analysis.}
+We analyze the complete correction flow: (a)~How many questions are correct/incorrect on Attempt~1? (b)~What percentage does the Judge flag for retry? (c)~What is the Lazarus Rate (correction success rate)? (d)~What are the Judge's discrimination metrics (TPR, FPR, Precision)?
+
+\paragraph{Experiment 4: Routing Comparison.}
+We compare our rule-based router against an LLM-based alternative (GPT-4o-mini classifying question type). Metrics: routing accuracy (agreement with oracle routing), end-to-end latency, and cost per query. This validates our design choice of simple, interpretable routing.

@@ -1,0 +1,36 @@
+% Introduction Section for Multi-Agent RAG Paper
+% FINAI@ICLR 2026 Workshop
+
+\section{Introduction}
+\label{sec:intro}
+
+Retrieval-augmented generation (RAG) has become the standard paradigm for knowledge-intensive question answering, enabling language models to ground their responses in retrieved documents~\citep{lewis2020retrieval}. However, as RAG systems are deployed in high-stakes domains such as finance, healthcare, and legal services, a critical limitation emerges: conventional single-pass RAG pipelines lack the ability to recognize and correct their own failures.
+
+Consider a financial analyst querying SEC filings to extract quarterly revenue figures. A single-pass RAG system retrieves documents, generates an answer, and returns, with no mechanism to verify whether the retrieved context was sufficient or whether the generated response correctly interprets numerical data. For financial professionals, an incorrect answer is worse than no answer. A system that cannot provide an \textbf{audit trail} of its reasoning is indistinguishable from a guess. This lack of self-assessment and transparency is a fundamental barrier to deployment in regulated industries.
+
+In finance specifically, three challenges compound: (1)~\emph{numeric reasoning} over tables and financial statements, (2)~\emph{temporal filtering} requiring understanding of fiscal years, quarters, and reporting periods, and (3)~\emph{entity disambiguation} among ticker symbols, subsidiaries, and corporate name changes. These challenges demand retrieval strategies that adapt to query complexity.
+
+From a financial analyst's perspective, a single-pass RAG system presents unacceptable risk: if retrieved documents are insufficient, the system returns an unreliable answer with no indication of uncertainty, potentially influencing investment decisions worth millions of dollars.
+
+We explicitly design for \textbf{analyst-in-the-loop} workflows where a 10--30 second wait for a verified, auditable answer is preferable to an instant, unreliable guess. This latency trade-off is fundamental to our design philosophy: the cost of an incorrect financial figure far exceeds the cost of additional verification time.
+
+We propose \textbf{Self-Correcting RAG}, a framework that decomposes retrieval-augmented generation into three specialized agents coordinated by an orchestrator with feedback-driven self-correction:
+
+\begin{itemize}[nosep]
+    \item A \textbf{Retrieval Agent} that \emph{autonomously} analyzes queries, extracts entities (e.g., ticker symbols), selects from available retrieval pipelines, and \emph{decides} escalation parameters (document count, HyDE activation) based on attempt number
+    \item A \textbf{Reasoning Agent} that generates answers with explicit citations and \emph{autonomously} adapts its prompting strategy (standard $\rightarrow$ conservative $\rightarrow$ detailed) based on prior attempt outcomes
+    \item A \textbf{Judge Agent} that evaluates answer quality against dynamic thresholds and \emph{autonomously decides} whether to accept the answer or request additional retrieval, without human intervention
+\end{itemize}
+
+Unlike prior work on agentic LLMs that focuses on tool use or multi-step reasoning~\citep{yao2022react,shinn2023reflexion}, our framework specifically targets document question-answering with explicit agent boundaries and escalation policies. While iterative self-correction has proven effective in general reasoning tasks (Self-Refine achieved 15--20\% improvements on select benchmarks through single-model self-feedback~\citep{madaan2023self}, and Reflexion demonstrated iterative improvement through verbal reflection~\citep{shinn2023reflexion}), applying this paradigm to retrieval-augmented document QA requires coordination across distinct components: retrieval strategies, generation prompts, and quality evaluation, each with its own escalation policies. Unlike single-agent reflection, our modular decomposition enables \emph{targeted} improvements at each stage. The feedback loop enables the system to recover from retrieval failures and generation errors through systematic retry with escalated strategies.
+
+Our contributions are:
+\begin{enumerate}[nosep]
+    \item \textbf{Structured Self-Correction for Document QA}: Unlike prior single-model self-reflection~\citep{madaan2023self}, we introduce \emph{targeted escalation} across retrieval, generation, and evaluation stages, each with domain-specific policies
+    \item \textbf{Grounded Verification}: A Judge that performs NLI-style entailment checking against retrieved evidence, with programmatic numeric verification for financial figures
+    \item \textbf{Audit-First Design}: Every agent decision logged with provenance, enabling compliance review required by regulated industries     \item \textbf{Empirical Finding}: Rule-based routing with judge-driven retry matches learned router performance at zero training cost, with full interpretability
+\end{enumerate}
+
+We use the term ``agentic'' to describe our pipeline because each component makes autonomous decisions within its scope: the Retrieval Agent selects strategies without prompting, the Reasoning Agent adapts prompts based on context, and the Judge Agent can autonomously request additional retrieval. This differs from tool-use agents that require explicit human instruction for each action.
+
+We evaluate Self-Correcting RAG on three diverse benchmarks spanning financial document QA, biomedical literature reasoning, and legal contract analysis. Our results show that the self-correction loop improves answer quality by recovering from failures that single-pass systems cannot detect, while the explicit agent decomposition provides interpretable decision traces for debugging and analysis.

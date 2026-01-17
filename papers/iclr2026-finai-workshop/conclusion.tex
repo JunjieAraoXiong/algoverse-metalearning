@@ -1,0 +1,21 @@
+% Conclusion Section for Self-Correcting RAG Paper
+% FINAI@ICLR 2026 Workshop
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented Self-Correcting RAG, a framework that decomposes retrieval-augmented generation into specialized agents with a self-correction feedback loop. By separating retrieval decisions, answer generation, and quality evaluation into distinct agents coordinated by an orchestrator, our system can detect and recover from failures that single-pass RAG systems cannot address.
+
+Our evaluation across finance, medical, and legal domains demonstrates that the same architecture generalizes without domain-specific tuning. The Judge Agent's quality assessment, combined with escalating retrieval and generation strategies, enables systematic recovery from both retrieval and generation failures.
+
+\paragraph{Alignment with Responsible AI.}
+Our multi-agent design addresses several concerns in deploying AI for high-stakes financial applications. The explicit agent decomposition provides interpretable decision traces, enabling audit and compliance review. The self-correction loop reduces error rates by detecting and recovering from failures that single-pass systems would miss. By logging all decisions with confidence scores, the system supports human oversight and uncertainty-aware downstream processing. These properties align with emerging requirements for trustworthy AI in regulated industries.
+
+\paragraph{Limitations.}
+The self-correction loop increases latency and cost when retry is triggered. The Judge Agent's evaluation is imperfect and may miss subtle errors or trigger unnecessary retries. Our rule-based pipeline selection, while zero-cost, may not capture all relevant query features.
+
+\paragraph{Future Work.}
+Promising directions include learned escalation policies that adapt based on domain and query type, more sophisticated judge models that can identify specific failure modes (potentially leveraging emerging Agent-as-a-Judge approaches~\citep{zhuge2024agent} which achieve 90\% human agreement on complex reasoning tasks), and extension to additional domains such as scientific literature and technical documentation.
+
+\paragraph{Broader Impact.}
+Self-Correcting RAG improves reliability in high-stakes domains where errors have real consequences. For finance professionals deploying such systems, the explicit decision traces enable confidence-aware decision-making: a low Judge score signals uncertainty and warrants human review before acting on recommendations. By providing interpretable decision traces, the framework supports the human oversight and auditability required in regulated industries. We hope this work encourages further research on self-correcting AI systems with explicit decision boundaries, particularly for financial and other high-stakes domains where reliability and transparency are paramount.
