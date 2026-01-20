@@ -7,6 +7,13 @@ Reference: https://github.com/D-Star-AI/dsRAG
 
 Key insight: Simple questions need single chunks, but complex questions benefit
 from combining multiple adjacent chunks into segments that provide fuller context.
+
+Adjacency Detection:
+- Primary: Uses 'page' metadata when available
+- Fallback: Uses 'chunk_index' metadata (sequential chunk order in document)
+- Last resort: Uses retrieval rank within document group
+
+This allows RSE to work with any chunking strategy, not just page-based.
 """
 
 import math
@@ -14,6 +21,35 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.documents import Document
+
+
+def get_chunk_position(chunk: Document, fallback_rank: int = 0) -> int:
+    """Get chunk position for adjacency detection.
+
+    Priority:
+    1. 'page' metadata (traditional page-based chunking)
+    2. 'chunk_index' metadata (sequential order from ingestion)
+    3. fallback_rank (position in current retrieval results)
+
+    Args:
+        chunk: Document with metadata
+        fallback_rank: Rank to use if no position metadata exists
+
+    Returns:
+        Integer position for adjacency comparison
+    """
+    # Try page first (original behavior)
+    page = chunk.metadata.get("page")
+    if page is not None:
+        return int(page)
+
+    # Try chunk_index (sequential order from ingestion)
+    chunk_index = chunk.metadata.get("chunk_index")
+    if chunk_index is not None:
+        return int(chunk_index)
+
+    # Fallback to retrieval rank within document
+    return fallback_rank
 
 
 # =============================================================================
@@ -130,7 +166,7 @@ def extract_relevant_segments(
             "rank": rank,
             "relevance": rel_score,
             "source": chunk.metadata.get("source", "unknown"),
-            "page": chunk.metadata.get("page", 0),
+            "position": get_chunk_position(chunk, fallback_rank=rank),
             "used": False,
         })
 
@@ -139,9 +175,10 @@ def extract_relevant_segments(
     for item in scored_chunks:
         doc_groups[item["source"]].append(item)
 
-    # Sort each group by page number for adjacency detection
+    # Sort each group by position for adjacency detection
+    # Position can be: page number, chunk_index, or retrieval rank
     for source in doc_groups:
-        doc_groups[source].sort(key=lambda x: (x["page"], x["rank"]))
+        doc_groups[source].sort(key=lambda x: (x["position"], x["rank"]))
 
     # Greedy segment extraction
     segments: List[str] = []
@@ -159,7 +196,7 @@ def extract_relevant_segments(
             for start_idx in available:
                 segment_value = 0.0
                 segment_items: List[Dict] = []
-                prev_page = items[start_idx]["page"]
+                prev_position = items[start_idx]["position"]
 
                 # Extend segment while chunks are adjacent and positive
                 for idx in range(start_idx, len(items)):
@@ -167,9 +204,10 @@ def extract_relevant_segments(
                     if item["used"]:
                         continue
 
-                    # Check adjacency (same page or next page)
-                    current_page = item["page"]
-                    if segment_items and (current_page - prev_page) > 1:
+                    # Check adjacency (same position or next position)
+                    # Works with page numbers, chunk indices, or ranks
+                    current_position = item["position"]
+                    if segment_items and (current_position - prev_position) > 1:
                         # Gap detected, stop extending
                         break
 
@@ -177,7 +215,7 @@ def extract_relevant_segments(
                     if item["value"] > 0 or not segment_items:
                         segment_value += item["value"]
                         segment_items.append(item)
-                        prev_page = current_page
+                        prev_position = current_position
 
                         if len(segment_items) >= max_segment_length:
                             break
@@ -217,7 +255,7 @@ def extract_segments_with_metadata(
     Returns list of dicts with:
         - text: Merged segment text
         - source: Document source
-        - pages: List of page numbers
+        - positions: List of chunk positions (page numbers or chunk indices)
         - num_chunks: Number of chunks in segment
         - total_value: Sum of chunk values
         - chunks: Original chunk documents
@@ -249,7 +287,7 @@ def extract_segments_with_metadata(
             "chunk": chunk,
             "value": value,
             "source": chunk.metadata.get("source", "unknown"),
-            "page": chunk.metadata.get("page", 0),
+            "position": get_chunk_position(chunk, fallback_rank=rank),
             "used": False,
         })
 
@@ -259,7 +297,7 @@ def extract_segments_with_metadata(
         doc_groups[item["source"]].append(item)
 
     for source in doc_groups:
-        doc_groups[source].sort(key=lambda x: x["page"])
+        doc_groups[source].sort(key=lambda x: x["position"])
 
     # Extract segments
     segments_with_meta = []
@@ -275,20 +313,20 @@ def extract_segments_with_metadata(
             for start_idx in available:
                 seg_value = 0.0
                 seg_items = []
-                prev_page = items[start_idx]["page"]
+                prev_position = items[start_idx]["position"]
 
                 for idx in range(start_idx, len(items)):
                     item = items[idx]
                     if item["used"]:
                         continue
 
-                    if seg_items and (item["page"] - prev_page) > 1:
+                    if seg_items and (item["position"] - prev_position) > 1:
                         break
 
                     if item["value"] > 0 or not seg_items:
                         seg_value += item["value"]
                         seg_items.append(item)
-                        prev_page = item["page"]
+                        prev_position = item["position"]
 
                         if len(seg_items) >= config["max_segment_length"]:
                             break
@@ -306,7 +344,7 @@ def extract_segments_with_metadata(
         segments_with_meta.append({
             "text": "\n\n".join([item["chunk"].page_content for item in items]),
             "source": source,
-            "pages": sorted(set(item["page"] for item in items)),
+            "positions": sorted(set(item["position"] for item in items)),
             "num_chunks": len(items),
             "total_value": value,
             "chunks": [item["chunk"] for item in items],
@@ -328,13 +366,14 @@ def merge_adjacent_chunks(
     max_gap: int = 1,
     max_segment_size: int = 5,
 ) -> List[str]:
-    """Simple fallback: merge chunks from same document on adjacent pages.
+    """Simple fallback: merge chunks from same document at adjacent positions.
 
     Simpler than full RSE but still provides some segment merging benefit.
+    Uses page numbers when available, otherwise falls back to chunk_index.
 
     Args:
         chunks: List of retrieved documents
-        max_gap: Maximum page gap to consider "adjacent"
+        max_gap: Maximum position gap to consider "adjacent"
         max_segment_size: Maximum chunks per segment
 
     Returns:
@@ -343,24 +382,27 @@ def merge_adjacent_chunks(
     if not chunks:
         return []
 
-    # Sort by source and page
+    # Sort by source and position
     sorted_chunks = sorted(
         chunks,
-        key=lambda c: (c.metadata.get("source", ""), c.metadata.get("page", 0))
+        key=lambda c: (
+            c.metadata.get("source", ""),
+            get_chunk_position(c, fallback_rank=0)
+        )
     )
 
     segments = []
     current_segment = []
     current_source = None
-    current_page = -999
+    current_position = -999
 
-    for chunk in sorted_chunks:
+    for i, chunk in enumerate(sorted_chunks):
         source = chunk.metadata.get("source", "")
-        page = chunk.metadata.get("page", 0)
+        position = get_chunk_position(chunk, fallback_rank=i)
 
         # Check if should start new segment
         if (source != current_source or
-            (page - current_page) > max_gap or
+            (position - current_position) > max_gap or
             len(current_segment) >= max_segment_size):
 
             if current_segment:
@@ -370,7 +412,7 @@ def merge_adjacent_chunks(
         else:
             current_segment.append(chunk)
 
-        current_page = page
+        current_position = position
 
     # Don't forget last segment
     if current_segment:

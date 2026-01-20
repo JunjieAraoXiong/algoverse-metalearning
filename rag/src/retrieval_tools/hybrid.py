@@ -1,6 +1,6 @@
 """Hybrid BM25 + semantic retriever builder."""
 
-from typing import Any, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
@@ -11,7 +11,8 @@ DEFAULT_ENSEMBLE_WEIGHTS = (0.5, 0.5)
 def build_hybrid_retriever(
     db: Chroma,
     top_k: int,
-    weights: Optional[Tuple[float, float]] = None
+    weights: Optional[Tuple[float, float]] = None,
+    metadata_filter: Optional[Dict[str, Any]] = None,
 ) -> Any:
     """Create an ensemble of BM25 + semantic retrievers.
 
@@ -21,6 +22,8 @@ def build_hybrid_retriever(
         weights: Tuple of (bm25_weight, semantic_weight). Defaults to (0.5, 0.5).
                  Higher BM25 weight = better for exact keyword matches.
                  Higher semantic weight = better for meaning-based similarity.
+        metadata_filter: Optional ChromaDB where filter for pre-filtering documents.
+                        Example: {"company": "3M"} or {"$and": [{"company": "3M"}, {"year": 2018}]}
 
     Returns:
         EnsembleRetriever combining BM25 and semantic search
@@ -31,7 +34,12 @@ def build_hybrid_retriever(
     if weights is None:
         weights = DEFAULT_ENSEMBLE_WEIGHTS
 
-    all_docs = db.get()
+    # Get documents - with optional pre-filtering
+    if metadata_filter:
+        all_docs = db.get(where=metadata_filter)
+    else:
+        all_docs = db.get()
+
     from langchain_core.documents import Document as LCDocument
 
     documents: List[LCDocument] = [
@@ -39,10 +47,22 @@ def build_hybrid_retriever(
         for text, meta in zip(all_docs["documents"], all_docs["metadatas"])
     ]
 
+    # If filter returned no docs, fall back to unfiltered
+    if not documents:
+        all_docs = db.get()
+        documents = [
+            LCDocument(page_content=text, metadata=meta)
+            for text, meta in zip(all_docs["documents"], all_docs["metadatas"])
+        ]
+
     bm25_retriever = BM25Retriever.from_documents(documents)
     bm25_retriever.k = top_k
 
-    semantic_retriever = db.as_retriever(search_kwargs={"k": top_k})
+    # Semantic retriever also needs the filter
+    search_kwargs = {"k": top_k}
+    if metadata_filter:
+        search_kwargs["filter"] = metadata_filter
+    semantic_retriever = db.as_retriever(search_kwargs=search_kwargs)
 
     return EnsembleRetriever(
         retrievers=[bm25_retriever, semantic_retriever],

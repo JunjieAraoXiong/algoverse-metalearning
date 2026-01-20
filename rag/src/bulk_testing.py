@@ -20,13 +20,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from langchain_chroma import Chroma
 
 # Import custom modules
-from dataset_adapters import BaseDatasetAdapter, FinanceBenchAdapter, PubMedQAAdapter
+from dataset_adapters import BaseDatasetAdapter, FinanceBenchAdapter, PubMedQAAdapter, CUADAdapter
 from evaluation.metrics import (
     embedding_similarity,
     calculate_aggregate_metrics,
     format_metrics_summary
 )
 from evaluation.llm_judge import llm_as_judge
+from evaluation.numeric_check import numeric_match
 from src.postprocessing.numeric_verify import verify_numeric_answer
 from src.retrieval_tools.tool_registry import (
     build_pipeline,
@@ -85,6 +86,24 @@ class BulkTestConfig:
     router_classifier_model: str = DEFAULTS.router_classifier_model
     router_hyde_model: str = DEFAULTS.router_hyde_model
     use_rule_router: bool = False  # Use free rule-based router instead of LLM
+    domain: str = None  # Domain for route selection (finance, legal, medical)
+
+    # RSE settings
+    use_rse: bool = False  # Enable Relevant Segment Extraction
+
+    # Agentic RAG settings
+    use_agentic_retry: bool = False  # Enable multi-agent retry loop
+    max_retries: int = 1  # Max retries when agentic mode is enabled
+    retry_threshold: float = 0.5  # Score below which to trigger retry
+    agent_log_dir: str = "agent_logs"  # Directory for agent decision logs
+    blind_judge: bool = False  # If True, Judge uses self-evaluation (no gold answer)
+
+    # Ablation study settings
+    ablation: str = None  # Ablation mode to run
+    ablation_no_retrieval_escalation: bool = False
+    ablation_no_prompt_escalation: bool = False
+    ablation_no_hyde: bool = False
+    ablation_no_deterministic_verify: bool = False
 
     # Runtime metadata
     timestamp: str = None
@@ -154,10 +173,11 @@ class BulkTestRunner:
                     hyde_model=self.config.router_hyde_model,
                     reranker_model=self.config.reranker_model,
                     use_rule_router=self.config.use_rule_router,
+                    domain=self.config.domain,
                 )
             else:
                 # Standard pipeline
-                retriever, set_k_fn, take_top_k_fn = build_retriever_for_pipeline(
+                retriever, set_k_fn, take_top_k_fn, use_hybrid = build_retriever_for_pipeline(
                     self.config.pipeline_id, db, top_k=self.config.top_k_retrieval
                 )
                 self.retriever = retriever
@@ -169,6 +189,8 @@ class BulkTestRunner:
                     set_k_fn=set_k_fn,
                     take_top_k_fn=take_top_k_fn,
                     reranker_model=self.config.reranker_model,
+                    db=db,  # Pass db for pre-filtering
+                    use_hybrid=use_hybrid,  # Pass flag for pre-filtering
                 )
 
             # Initialize LLM provider
@@ -196,17 +218,32 @@ class BulkTestRunner:
         try:
             # Retrieval phase
             retrieval_start = time.time()
-            docs = self.pipeline.retrieve(question) if self.pipeline else []
-            result['retrieval_time_ms'] = (time.time() - retrieval_start) * 1000
 
-            if not docs:
-                result['error'] = "No relevant documents found"
-                return result
+            # Use RSE for segment-level retrieval if enabled
+            if self.config.use_rse and self.pipeline and hasattr(self.pipeline, 'retrieve_segments'):
+                segments = self.pipeline.retrieve_segments(question)
+                result['retrieval_time_ms'] = (time.time() - retrieval_start) * 1000
 
-            # Extract context and sources
-            context = "\n\n".join(d.page_content for d in docs)
-            sources = [doc.metadata for doc in docs]
-            result['sources'] = sources
+                if not segments:
+                    result['error'] = "No relevant segments found (RSE)"
+                    return result
+
+                # RSE returns merged text segments, not Document objects
+                context = "\n\n---\n\n".join(segments)
+                result['sources'] = [{"source": "RSE segment", "segment_count": len(segments)}]
+            else:
+                # Standard document-level retrieval
+                docs = self.pipeline.retrieve(question) if self.pipeline else []
+                result['retrieval_time_ms'] = (time.time() - retrieval_start) * 1000
+
+                if not docs:
+                    result['error'] = "No relevant documents found"
+                    return result
+
+                # Extract context and sources
+                context = "\n\n".join(d.page_content for d in docs)
+                sources = [doc.metadata for doc in docs]
+                result['sources'] = sources
 
             # Generation phase
             generation_start = time.time()
@@ -411,6 +448,195 @@ Plan and Answer:"""
         """Public method to save results."""
         self._save_results(results_df, adapter, partial=False)
 
+    def run_agentic_test(self, adapter: BaseDatasetAdapter) -> pd.DataFrame:
+        """Run agentic RAG test with self-correcting retry loop.
+
+        This mode uses multi-agent orchestration:
+        1. RetrievalAgent: Decides retrieval strategy
+        2. ReasoningAgent: Generates answers
+        3. JudgeAgent: Evaluates and triggers retries
+        """
+        print("\n" + "=" * 60)
+        print("STARTING AGENTIC RAG TEST")
+        print(f"Max retries: {self.config.max_retries}")
+        print(f"Retry threshold: {self.config.retry_threshold}")
+        print("=" * 60)
+
+        # Load dataset
+        try:
+            df = adapter.load_dataset()
+        except Exception as e:
+            print(f"ERROR: Failed to load dataset: {str(e)}")
+            sys.exit(1)
+
+        # Get column names
+        question_col = adapter.get_question_column()
+        answer_col = adapter.get_answer_column()
+        question_type_col = adapter.get_question_type_column()
+        metadata_cols = adapter.get_metadata_columns()
+
+        print(f"Dataset loaded: {len(df)} questions")
+
+        # Initialize embeddings and ChromaDB
+        print("\nInitializing RAG framework...")
+        emb_config = EMBEDDINGS.get(self.config.embedding_model)
+        if emb_config:
+            print(f"  Loading embeddings: {emb_config.model_id} ({emb_config.provider})")
+        self.embeddings = get_embedding_model(self.config.embedding_model)
+
+        print(f"  Loading ChromaDB from: {self.config.chroma_path}")
+        from langchain_chroma import Chroma
+        db = Chroma(
+            persist_directory=self.config.chroma_path,
+            embedding_function=self.embeddings
+        )
+
+        # Build agentic orchestrator
+        from src.agents import AgenticRAGOrchestrator
+        from src.agents.orchestrator import AgenticRAGConfig
+
+        agentic_config = AgenticRAGConfig(
+            max_retries=self.config.max_retries,
+            retry_threshold=self.config.retry_threshold,
+            blind_judge=self.config.blind_judge,
+            llm_model=self.config.model_name,
+            judge_model=self.config.judge_model,
+            reranker_model=self.config.reranker_model,
+            use_rule_router=self.config.use_rule_router,
+            use_rse=self.config.use_rse,
+            log_dir=self.config.agent_log_dir,
+            enable_logging=True,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            # Ablation study settings
+            ablation_no_retrieval_escalation=self.config.ablation_no_retrieval_escalation,
+            ablation_no_prompt_escalation=self.config.ablation_no_prompt_escalation,
+            ablation_no_hyde=self.config.ablation_no_hyde,
+            ablation_no_deterministic_verify=self.config.ablation_no_deterministic_verify,
+        )
+
+        orchestrator = AgenticRAGOrchestrator(
+            config=agentic_config,
+            db=db,
+            embedding_fn=self.embeddings,
+        )
+
+        print("Agentic orchestrator initialized!\n")
+
+        # Process questions
+        results = []
+        start_time = time.time()
+
+        try:
+            for idx, row in tqdm(df.iterrows(), total=len(df), desc="Agentic Processing"):
+                question = row[question_col]
+                gold_answer = row[answer_col]
+
+                # Process through agentic pipeline
+                agentic_result = orchestrator.process_question(
+                    question=question,
+                    gold_answer=gold_answer,
+                    question_id=str(idx),
+                )
+
+                # Calculate semantic similarity
+                if agentic_result.final_answer:
+                    sem_sim = embedding_similarity(
+                        agentic_result.final_answer,
+                        gold_answer,
+                        self.embeddings
+                    )
+                else:
+                    sem_sim = 0.0
+
+                # Calculate numeric accuracy (predicted vs gold)
+                # This measures whether the predicted numbers match the gold answer
+                # Different from verify_numeric_answer which checks hallucination
+                numeric_result, numeric_explanation = numeric_match(
+                    gold=gold_answer,
+                    predicted=agentic_result.final_answer or ""
+                )
+                # Convert: True=1.0, False=0.0, None=skip (non-numeric question)
+                if numeric_result is True:
+                    numeric_accuracy = 1.0
+                elif numeric_result is False:
+                    numeric_accuracy = 0.0
+                else:
+                    numeric_accuracy = None  # Can't determine (no numbers in question)
+
+                # Build result row
+                result_row = {
+                    'question_id': idx,
+                    'question': question,
+                    'gold_answer': gold_answer,
+                    'predicted_answer': agentic_result.final_answer,
+                    'semantic_similarity': sem_sim,
+                    'judge_score': agentic_result.final_score,
+                    'correct': agentic_result.correct,
+                    'attempts': agentic_result.attempts,
+                    'improvement_from_retry': agentic_result.improvement_from_retry,
+                    'numeric_accuracy': numeric_accuracy,
+                    'numeric_explanation': numeric_explanation,
+                    'retrieval_time_ms': agentic_result.retrieval_time_ms,
+                    'generation_time_ms': agentic_result.generation_time_ms,
+                    'total_time_ms': agentic_result.total_time_ms,
+                    'error': agentic_result.error,
+                }
+
+                # Add question type if available
+                if question_type_col and question_type_col in row:
+                    result_row['question_type'] = row[question_type_col]
+
+                # Add metadata columns
+                for col in metadata_cols:
+                    if col in row:
+                        result_row[col] = row[col]
+
+                results.append(result_row)
+
+        except KeyboardInterrupt:
+            print(f"\n\nInterrupted! Saving {len(results)} partial results...")
+            if results:
+                results_df = pd.DataFrame(results)
+                self._save_agentic_results(results_df, adapter, orchestrator, partial=True)
+            sys.exit(0)
+
+        print(f"\nProcessing complete! Total time: {time.time() - start_time:.2f}s")
+
+        # Print summary
+        orchestrator.print_summary()
+
+        # Export decision logs
+        log_paths = orchestrator.export_decisions()
+        if log_paths:
+            print(f"Decision logs saved to: {log_paths.get('json', 'N/A')}")
+
+        return pd.DataFrame(results)
+
+    def _save_agentic_results(
+        self,
+        results_df: pd.DataFrame,
+        adapter: BaseDatasetAdapter,
+        orchestrator,
+        partial: bool = False
+    ):
+        """Save agentic results with additional statistics."""
+        # Standard save
+        self._save_results(results_df, adapter, partial)
+
+        # Save additional agentic statistics
+        output_dir = Path(self.config.output_dir)
+        stats = orchestrator.get_statistics()
+
+        stats_path = output_dir / f"{self.config.timestamp}_{adapter.name}_agentic_stats.json"
+        with open(stats_path, 'w') as f:
+            json.dump(stats, f, indent=2)
+        print(f"Agentic stats saved to: {stats_path}")
+
+    def save_agentic_results(self, results_df: pd.DataFrame, adapter: BaseDatasetAdapter, orchestrator):
+        """Public method to save agentic results."""
+        self._save_agentic_results(results_df, adapter, orchestrator, partial=False)
+
 
 def main():
     """Main entry point for bulk testing."""
@@ -484,6 +710,52 @@ def main():
         '--use-rule-router', action='store_true',
         help='Use free rule-based router instead of LLM classifier (instant, no API cost)'
     )
+    parser.add_argument(
+        '--domain', type=str, default=None,
+        choices=['finance', 'legal', 'medical'],
+        help='Domain for route selection. Affects reranking strategy (e.g., legal skips reranking per LegalBench-RAG findings)'
+    )
+
+    # RSE argument
+    parser.add_argument(
+        '--use-rse', action='store_true',
+        help='Enable Relevant Segment Extraction (RSE) for table-heavy queries. Merges adjacent chunks into coherent segments.'
+    )
+
+    # Agentic RAG arguments
+    parser.add_argument(
+        '--use-agentic-retry', action='store_true',
+        help='Enable agentic RAG with self-correcting retry loop'
+    )
+    parser.add_argument(
+        '--max-retries', type=int, default=1,
+        help='Maximum retry attempts when agentic mode is enabled (default: 1)'
+    )
+    parser.add_argument(
+        '--retry-threshold', type=float, default=0.5,
+        help='Judge score below which to trigger retry (default: 0.5)'
+    )
+    parser.add_argument(
+        '--agent-log-dir', type=str, default='agent_logs',
+        help='Directory for agent decision logs (default: agent_logs)'
+    )
+    parser.add_argument(
+        '--blind-judge', action='store_true',
+        help='Use blind judge mode: Judge evaluates without seeing gold answer (for realistic TPR/FPR)'
+    )
+
+    # Ablation study arguments
+    parser.add_argument(
+        '--ablation', type=str, default=None,
+        choices=[
+            'no_retrieval_escalation',
+            'no_prompt_escalation',
+            'no_hyde',
+            'no_deterministic_verify',
+            'no_judge',  # Equivalent to max_retries=0
+        ],
+        help='Run ablation study by disabling specific components'
+    )
 
     args = parser.parse_args()
 
@@ -503,7 +775,35 @@ def main():
         router_classifier_model=args.router_classifier_model,
         router_hyde_model=args.router_hyde_model,
         use_rule_router=args.use_rule_router,
+        domain=args.domain,
+        # RSE settings
+        use_rse=args.use_rse,
+        # Agentic settings
+        use_agentic_retry=args.use_agentic_retry,
+        max_retries=args.max_retries,
+        retry_threshold=args.retry_threshold,
+        agent_log_dir=args.agent_log_dir,
+        blind_judge=args.blind_judge,
+        # Ablation settings
+        ablation=args.ablation,
     )
+
+    # Handle ablation mode - set appropriate flags
+    if args.ablation:
+        print(f"\n*** ABLATION MODE: {args.ablation} ***")
+        config.use_agentic_retry = True  # Force agentic mode for ablations
+
+        if args.ablation == 'no_retrieval_escalation':
+            config.ablation_no_retrieval_escalation = True
+        elif args.ablation == 'no_prompt_escalation':
+            config.ablation_no_prompt_escalation = True
+        elif args.ablation == 'no_hyde':
+            config.ablation_no_hyde = True
+        elif args.ablation == 'no_deterministic_verify':
+            config.ablation_no_deterministic_verify = True
+        elif args.ablation == 'no_judge':
+            # No judge = no retries (single-pass equivalent)
+            config.max_retries = 0
 
     # Handle chroma path - explicit override takes precedence
     if args.chroma_path:
@@ -513,9 +813,23 @@ def main():
         ds = args.dataset.lower()
         if config.chroma_path.endswith(DEFAULTS.chroma_path):
             if ds == 'pubmedqa':
-                config.chroma_path = str(Path(__file__).parent.parent / "chroma_pubmedqa")
+                config.chroma_path = str(Path(__file__).parent.parent / "chroma_medical")
             elif ds == 'financebench':
                 config.chroma_path = str(Path(__file__).parent.parent / "chroma")
+            elif ds == 'cuad':
+                config.chroma_path = str(Path(__file__).parent.parent / "chroma_cuad")
+
+    # Auto-detect domain from dataset if not explicitly specified
+    if config.domain is None:
+        ds = args.dataset.lower()
+        dataset_to_domain = {
+            'financebench': 'finance',
+            'cuad': 'legal',
+            'pubmedqa': 'medical',
+        }
+        config.domain = dataset_to_domain.get(ds)
+        if config.domain:
+            print(f"Auto-detected domain '{config.domain}' from dataset '{ds}'")
 
     # Select dataset adapter
     ds = args.dataset.lower()
@@ -523,17 +837,25 @@ def main():
         adapter = FinanceBenchAdapter(subset_csv=args.subset)
     elif ds == 'pubmedqa':
         adapter = PubMedQAAdapter(subset_csv=args.subset)
+    elif ds == 'cuad':
+        adapter = CUADAdapter(subset_csv=args.subset)
     else:
         print(f"ERROR: Unknown dataset '{args.dataset}'")
-        print("Available datasets: financebench, pubmedqa")
+        print("Available datasets: financebench, pubmedqa, cuad")
         sys.exit(1)
 
     # Create runner and execute
     runner = BulkTestRunner(config)
 
     try:
-        results_df = runner.run_bulk_test(adapter)
-        runner.save_results(results_df, adapter)
+        if config.use_agentic_retry:
+            # Run agentic RAG with retry loop
+            results_df = runner.run_agentic_test(adapter)
+            runner.save_results(results_df, adapter)
+        else:
+            # Standard RAG (no retry)
+            results_df = runner.run_bulk_test(adapter)
+            runner.save_results(results_df, adapter)
     except Exception as e:
         print(f"\nFATAL ERROR: {str(e)}")
         import traceback

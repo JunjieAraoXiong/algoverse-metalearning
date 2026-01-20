@@ -61,48 +61,29 @@ load_dotenv()
 # =============================================================================
 
 # Pipeline configurations to test
-# Extended to include new techniques: RSE, Cohere reranker, HyDE
+# Simplified to match the 4 pipelines used by the rule-based router
+# This reduces API calls: 4 configs × N questions instead of 22 × N
 PIPELINE_CONFIGS = [
     # =========================================================================
-    # Tier 1: Baseline configs (no advanced techniques)
+    # Core pipelines (matching rule-based router options)
     # =========================================================================
     {"pipeline_id": "semantic", "top_k": 5},
-    {"pipeline_id": "semantic", "top_k": 10},
     {"pipeline_id": "hybrid", "top_k": 5},
-    {"pipeline_id": "hybrid", "top_k": 10},
     {"pipeline_id": "hybrid_filter", "top_k": 5},
-    {"pipeline_id": "hybrid_filter", "top_k": 10},
-
-    # =========================================================================
-    # Tier 2: Reranking variants
-    # =========================================================================
-    # BGE reranker (local, free)
     {"pipeline_id": "hybrid_filter_rerank", "top_k": 5, "reranker": "bge"},
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "bge"},
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 15, "reranker": "bge"},
-
-    # Cohere reranker (API, SOTA quality)
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 5, "reranker": "cohere"},
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "cohere"},
-
-    # =========================================================================
-    # Tier 3: RSE (Relevant Segment Extraction)
-    # =========================================================================
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "bge", "use_rse": True},
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 15, "reranker": "bge", "use_rse": True},
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "cohere", "use_rse": True},
-
-    # =========================================================================
-    # Tier 4: HyDE (Hypothetical Document Embeddings)
-    # =========================================================================
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "bge", "use_hyde": True},
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "cohere", "use_hyde": True},
-
-    # =========================================================================
-    # Tier 5: Combined techniques
-    # =========================================================================
-    {"pipeline_id": "hybrid_filter_rerank", "top_k": 15, "reranker": "cohere", "use_rse": True, "use_hyde": True},
 ]
+
+# Extended configs for comprehensive analysis (commented out for speed)
+# PIPELINE_CONFIGS_EXTENDED = [
+#     {"pipeline_id": "semantic", "top_k": 10},
+#     {"pipeline_id": "hybrid", "top_k": 10},
+#     {"pipeline_id": "hybrid_filter", "top_k": 10},
+#     {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "bge"},
+#     {"pipeline_id": "hybrid_filter_rerank", "top_k": 5, "reranker": "cohere"},
+#     {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "cohere"},
+#     {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "bge", "use_rse": True},
+#     {"pipeline_id": "hybrid_filter_rerank", "top_k": 10, "reranker": "bge", "use_hyde": True},
+# ]
 
 # Default model for generation (using a reliable, fast option)
 DEFAULT_MODEL = "gpt-4o-mini"
@@ -198,7 +179,7 @@ class OracleLabelGenerator:
                 reranker_model = DEFAULTS.reranker_model  # BGE
 
             # Build retriever
-            retriever, set_k_fn, take_top_k_fn = build_retriever_for_pipeline(
+            retriever, set_k_fn, take_top_k_fn, use_hybrid = build_retriever_for_pipeline(
                 config["pipeline_id"],
                 self.db,
                 top_k=config["top_k"]
@@ -214,6 +195,8 @@ class OracleLabelGenerator:
                 take_top_k_fn=take_top_k_fn,
                 reranker_model=reranker_model,
                 use_rse=config.get("use_rse", False),
+                db=self.db,
+                use_hybrid=use_hybrid,
             )
 
             self.pipelines[key] = pipeline
@@ -359,6 +342,9 @@ Answer:"""
                 "use_rse": best_config.get("use_rse", False),
                 "use_hyde": best_config.get("use_hyde", False),
             },
+            # Top-level fields for training script compatibility
+            "best_pipeline": best_config["pipeline_id"],
+            "best_top_k": best_config["top_k"],
             "best_score": all_scores[best_key],
             "all_scores": all_scores,
             "best_answer": all_answers[best_key],
@@ -368,12 +354,14 @@ Answer:"""
         self,
         output_path: str,
         resume: bool = False,
+        limit: int = None,
     ) -> Dict[str, Any]:
         """Generate oracle labels for all questions.
 
         Args:
             output_path: Path to save results
             resume: If True, load existing results and continue
+            limit: Maximum number of questions to process (None = all)
 
         Returns:
             Dictionary of all oracle labels
@@ -381,6 +369,11 @@ Answer:"""
         # Load dataset
         adapter = FinanceBenchAdapter()
         df = adapter.load_dataset()
+
+        # Apply limit if specified
+        if limit is not None:
+            df = df.head(limit)
+
         print(f"Loaded {len(df)} questions from FinanceBench")
 
         # Load existing results if resuming
@@ -504,13 +497,19 @@ def main():
     parser.add_argument(
         "--embedding",
         type=str,
-        default="openai-large",
-        help="Embedding model (default: openai-large)",
+        default="bge-large",
+        help="Embedding model (default: bge-large, FREE local)",
     )
     parser.add_argument(
         "--resume",
         action="store_true",
         help="Resume from existing output file",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit number of questions to process (for testing)",
     )
     args = parser.parse_args()
 
@@ -526,6 +525,7 @@ def main():
     print(f"ChromaDB: {chroma_path}")
     print(f"Model: {args.model}")
     print(f"Resume: {args.resume}")
+    print(f"Limit: {args.limit if args.limit else 'all'}")
     print("=" * 60)
 
     # Validate ChromaDB path exists
@@ -544,7 +544,7 @@ def main():
         embedding_model=args.embedding,
     )
     generator.initialize()
-    labels = generator.generate_labels(output_path, resume=args.resume)
+    labels = generator.generate_labels(output_path, resume=args.resume, limit=args.limit)
 
     # Print summary
     print("\n" + "=" * 60)

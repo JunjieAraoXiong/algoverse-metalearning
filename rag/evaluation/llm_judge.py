@@ -156,3 +156,63 @@ def llm_as_judge_batch(
         score, justification = llm_as_judge(q, gold, pred, judge_model)
         results.append((score, justification))
     return results
+
+
+def llm_as_judge_with_numeric_check(
+    question: str,
+    gold_answer: str,
+    predicted_answer: str,
+    judge_model: str = "gpt-4o-mini",
+    use_numeric_augmentation: bool = True,
+) -> Tuple[float, str]:
+    """LLM-as-Judge with tool-augmented numeric verification.
+
+    This implements the hybrid evaluation approach recommended for financial QA:
+    1. Run standard LLM-as-Judge for semantic evaluation
+    2. Run deterministic numeric check to catch magnitude errors
+    3. Override LLM if numeric check finds clear mismatch/match
+
+    Per GPT-5.2 research: "66% of FinanceBench questions involve numerical
+    calculation. A vanilla LLM-as-Judge may not consistently catch magnitude
+    errors or subtle numeric discrepancies."
+
+    Args:
+        question: The original question
+        gold_answer: The gold/reference answer
+        predicted_answer: The predicted answer to evaluate
+        judge_model: Model to use for judging
+        use_numeric_augmentation: Whether to use numeric verification (default True)
+
+    Returns:
+        Tuple of (score between 0-1, justification string)
+    """
+    # First, get LLM judge score
+    llm_score, llm_justification = llm_as_judge(
+        question=question,
+        gold_answer=gold_answer,
+        predicted_answer=predicted_answer,
+        judge_model=judge_model,
+    )
+
+    # If numeric augmentation disabled, return LLM score directly
+    if not use_numeric_augmentation:
+        return llm_score, llm_justification
+
+    # Augment with numeric verification
+    try:
+        from evaluation.numeric_check import augmented_judge
+        final_score, final_justification = augmented_judge(
+            question=question,
+            gold_answer=gold_answer,
+            predicted_answer=predicted_answer,
+            llm_score=llm_score,
+            llm_justification=llm_justification,
+        )
+        return final_score, final_justification
+    except ImportError:
+        # Fall back to LLM-only if numeric_check not available
+        return llm_score, llm_justification
+    except Exception as e:
+        # On any error, fall back to LLM score
+        print(f"Warning: Numeric check failed: {e}")
+        return llm_score, f"{llm_justification} [numeric check failed: {e}]"

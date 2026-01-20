@@ -225,17 +225,26 @@ def extract_features(question: str) -> Dict[str, float]:
     return features.to_dict()
 
 
-def extract_features_batch(questions: List[str]) -> List[Dict[str, float]]:
+def extract_features_batch(
+    questions: List[str],
+    show_progress: bool = False,
+) -> List[Dict[str, float]]:
     """Extract features from multiple questions.
 
     Args:
         questions: List of question texts
+        show_progress: Whether to show tqdm progress bar
 
     Returns:
         List of feature dictionaries
     """
     extractor = get_extractor()
-    return [extractor.extract(q).to_dict() for q in questions]
+
+    if show_progress:
+        from tqdm import tqdm
+        return [extractor.extract(q).to_dict() for q in tqdm(questions, desc="Extracting features")]
+    else:
+        return [extractor.extract(q).to_dict() for q in questions]
 
 
 # =============================================================================

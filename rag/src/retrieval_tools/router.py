@@ -374,22 +374,40 @@ class RoutedPipeline(RetrievalPipeline):
         self._pipeline_cache: Dict[tuple, Any] = {}
         self._hyde_retriever: Optional[HyDERetriever] = None
 
+    def _get_effective_pipeline_id(self, route) -> str:
+        """Get the effective pipeline_id, respecting skip_rerank flag.
+
+        If skip_rerank is True and the pipeline uses reranking,
+        returns the non-rerank variant.
+        """
+        pipeline_id = route.pipeline_id
+        skip_rerank = getattr(route, 'skip_rerank', False)
+
+        if skip_rerank and pipeline_id.endswith('_rerank'):
+            # Strip _rerank suffix to get base pipeline
+            return pipeline_id[:-7]  # Remove "_rerank"
+        return pipeline_id
+
     def _get_pipeline(self, route) -> Any:
         """Get or create a SimplePipeline for the route."""
-        cache_key = (route.pipeline_id, route.top_k, route.initial_k_factor)
+        # Use effective pipeline_id that respects skip_rerank
+        effective_pipeline_id = self._get_effective_pipeline_id(route)
+        cache_key = (effective_pipeline_id, route.top_k, route.initial_k_factor)
 
         if cache_key not in self._pipeline_cache:
-            retriever, set_k_fn, take_top_k_fn = build_retriever_for_pipeline(
-                route.pipeline_id, self.db, top_k=route.top_k
+            retriever, set_k_fn, take_top_k_fn, use_hybrid = build_retriever_for_pipeline(
+                effective_pipeline_id, self.db, top_k=route.top_k
             )
             pipeline = build_pipeline(
-                pipeline_id=route.pipeline_id,
+                pipeline_id=effective_pipeline_id,
                 retriever=retriever,
                 top_k=route.top_k,
                 initial_k_factor=route.initial_k_factor,
                 set_k_fn=set_k_fn,
                 take_top_k_fn=take_top_k_fn,
                 reranker_model=self._reranker_model,
+                db=self.db,
+                use_hybrid=use_hybrid,
             )
             self._pipeline_cache[cache_key] = pipeline
 
@@ -409,6 +427,10 @@ class RoutedPipeline(RetrievalPipeline):
     def retrieve(self, question: str) -> List[Document]:
         """
         Classify question, route to appropriate strategy, and retrieve.
+
+        Respects skip_rerank flag from route config:
+        - For HyDE path: skips reranker if skip_rerank=True
+        - For standard path: uses non-rerank pipeline variant if skip_rerank=True
         """
         # Step 1: Classify the question
         classification = self.classifier.classify(question)
@@ -416,6 +438,7 @@ class RoutedPipeline(RetrievalPipeline):
 
         # Step 2: Get route configuration
         route = self.routes.get(question_type, self.routes["domain-relevant"])
+        skip_rerank = getattr(route, 'skip_rerank', False)
 
         # Step 3: Retrieve based on route configuration
         if route.use_hyde:
@@ -424,11 +447,15 @@ class RoutedPipeline(RetrievalPipeline):
             hyde_retriever = self._get_hyde_retriever(initial_k)
             docs = hyde_retriever.invoke(question)
 
-            # Apply reranking
-            reranker = get_reranker(model_name=self._reranker_model)
-            docs = reranker.rerank(question, docs, route.top_k)
+            # Apply reranking unless skip_rerank is set
+            if not skip_rerank:
+                reranker = get_reranker(model_name=self._reranker_model)
+                docs = reranker.rerank(question, docs, route.top_k)
+            else:
+                # Just truncate to top_k without reranking
+                docs = docs[:route.top_k]
         else:
-            # Use standard SimplePipeline
+            # Use standard SimplePipeline (respects skip_rerank via _get_pipeline)
             pipeline = self._get_pipeline(route)
             docs = pipeline.retrieve(question)
 
@@ -475,6 +502,7 @@ def build_routed_pipeline(
     routes: dict = None,
     reranker_model: str = None,
     use_rule_router: bool = False,
+    domain: str = None,
 ) -> RoutedPipeline:
     """
     Build a RoutedPipeline that classifies questions and routes
@@ -485,14 +513,17 @@ def build_routed_pipeline(
         embedding_fn: Embedding function for HyDE
         classifier_model: Model for question classification
         hyde_model: Model for HyDE generation
-        routes: Custom route configurations (optional)
+        routes: Custom route configurations (optional, overrides domain)
         reranker_model: Model for reranking
         use_rule_router: If True, use free RuleBasedClassifier instead of LLM
+        domain: Domain for route selection ("finance", "legal", "medical").
+                Uses domain-specific routes that may skip reranking.
+                Ignored if routes is explicitly provided.
 
     Returns:
         RoutedPipeline instance
     """
-    from src.config import ROUTES, DEFAULTS
+    from src.config import ROUTES, DEFAULTS, get_routes_for_domain
 
     # Choose classifier: rule-based (free) or LLM-based (costs API calls)
     if use_rule_router:
@@ -503,11 +534,19 @@ def build_routed_pipeline(
     hyde_gen = get_hyde_generator(model_name=hyde_model)
     table_filter = TablePreferenceFilter()
 
+    # Determine routes: explicit > domain-specific > default
+    if routes is not None:
+        selected_routes = routes
+    elif domain is not None:
+        selected_routes = get_routes_for_domain(domain)
+    else:
+        selected_routes = ROUTES
+
     return RoutedPipeline(
         db=db,
         embedding_fn=embedding_fn,
         classifier=classifier,
-        routes=routes or ROUTES,
+        routes=selected_routes,
         hyde_generator=hyde_gen,
         table_filter=table_filter,
         reranker_model=reranker_model or DEFAULTS.reranker_model,

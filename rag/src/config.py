@@ -17,9 +17,125 @@ class EmbeddingConfig:
     """Configuration for embedding models."""
     name: str
     model_id: str
-    provider: str  # "local" or "openai"
+    provider: str  # "local", "openai", "azure", "cohere"
     dimension: int
     description: str
+
+
+class CohereAsymmetricEmbeddings:
+    """Cohere embeddings wrapper that uses different input_type for queries vs documents.
+
+    This implements the dsRAG insight: Cohere's embed-v3 performs significantly better
+    when using:
+    - input_type="search_document" for embedding documents (indexing)
+    - input_type="search_query" for embedding queries (retrieval)
+
+    This asymmetric embedding approach improves retrieval because:
+    1. Documents are statements of fact
+    2. Queries are questions or information needs
+    3. The model learns different representations for each
+    """
+
+    def __init__(self, model: str, api_key: str):
+        self.model = model
+        self.api_key = api_key
+        self._client = None
+
+    def _get_client(self):
+        """Lazy-load the Cohere client."""
+        if self._client is None:
+            import cohere
+            self._client = cohere.ClientV2(api_key=self.api_key)
+        return self._client
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Embed documents using input_type='search_document'.
+
+        Cohere has a limit of 96 texts per request, so we batch accordingly.
+        """
+        if not texts:
+            return []
+
+        client = self._get_client()
+        all_embeddings = []
+        batch_size = 96  # Cohere's maximum
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            response = client.embed(
+                texts=batch,
+                model=self.model,
+                input_type="search_document",
+                embedding_types=["float"],
+            )
+            all_embeddings.extend([list(emb) for emb in response.embeddings.float_])
+
+        return all_embeddings
+
+    def embed_query(self, text: str) -> List[float]:
+        """Embed a query using input_type='search_query'."""
+        client = self._get_client()
+        response = client.embed(
+            texts=[text],
+            model=self.model,
+            input_type="search_query",
+            embedding_types=["float"],
+        )
+        return list(response.embeddings.float_[0])
+
+
+class VoyageAsymmetricEmbeddings:
+    """Voyage AI embeddings wrapper with asymmetric input types.
+
+    Voyage AI (like Cohere) supports distinct input_type for queries vs documents:
+    - input_type="document" for embedding documents (indexing)
+    - input_type="query" for embedding queries (retrieval)
+
+    Voyage AI advantages over Cohere:
+    - +20% average improvement across 100 retrieval datasets
+    - 32K context window (vs Cohere's 512 tokens)
+    - Domain-specific models (voyage-finance-2, voyage-law-2)
+    """
+
+    def __init__(self, model: str, api_key: str):
+        self.model = model
+        self.api_key = api_key
+        self._client = None
+
+    def _get_client(self):
+        """Lazy-load the Voyage client."""
+        if self._client is None:
+            import voyageai
+            self._client = voyageai.Client(api_key=self.api_key)
+        return self._client
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Embed documents using input_type='document'."""
+        if not texts:
+            return []
+        client = self._get_client()
+        # Voyage recommends batching - max 128 texts per call
+        all_embeddings = []
+        batch_size = 128
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            result = client.embed(
+                batch,
+                model=self.model,
+                input_type="document",
+            )
+            all_embeddings.extend(result.embeddings)
+        return all_embeddings
+
+    def embed_query(self, text: str) -> List[float]:
+        """Embed a query using input_type='query'."""
+        client = self._get_client()
+        result = client.embed(
+            [text],
+            model=self.model,
+            input_type="query",
+        )
+        return result.embeddings[0]
 
 
 # Embedding registry - local models are FREE
@@ -68,11 +184,79 @@ EMBEDDINGS: Dict[str, EmbeddingConfig] = {
         dimension=1536,
         description="OpenAI - $0.02/1M tokens (PAID)",
     ),
+    # Azure OpenAI models (use with Azure credits)
+    "azure-small": EmbeddingConfig(
+        name="azure-small",
+        model_id="text-embedding-3-small",
+        provider="azure",
+        dimension=1536,
+        description="Azure OpenAI - use with Azure credits",
+    ),
+    "azure-large": EmbeddingConfig(
+        name="azure-large",
+        model_id="text-embedding-3-large",
+        provider="azure",
+        dimension=3072,
+        description="Azure OpenAI - use with Azure credits",
+    ),
+    # Cohere embeddings - dsRAG benchmark SOTA (PAID)
+    # Key feature: uses distinct input_type for queries vs documents
+    "cohere-v3": EmbeddingConfig(
+        name="cohere-v3",
+        model_id="embed-english-v3.0",
+        provider="cohere",
+        dimension=1024,
+        description="Cohere embed-v3 - SOTA retrieval (~$0.10/1M tokens)",
+    ),
+    "cohere-v3-multilingual": EmbeddingConfig(
+        name="cohere-v3-multilingual",
+        model_id="embed-multilingual-v3.0",
+        provider="cohere",
+        dimension=1024,
+        description="Cohere embed-v3 multilingual - for non-English docs",
+    ),
+    # Voyage AI embeddings - SOTA retrieval, +20% over Cohere (PAID)
+    # 32K context window, supports input_type for query/document
+    "voyage-3-large": EmbeddingConfig(
+        name="voyage-3-large",
+        model_id="voyage-3-large",
+        provider="voyage",
+        dimension=1024,
+        description="Voyage AI - SOTA retrieval, +20% over Cohere (~$0.06/1M tokens)",
+    ),
+    "voyage-finance-2": EmbeddingConfig(
+        name="voyage-finance-2",
+        model_id="voyage-finance-2",
+        provider="voyage",
+        dimension=1024,
+        description="Voyage AI - Finance domain optimized (~$0.12/1M tokens)",
+    ),
+    "voyage-law-2": EmbeddingConfig(
+        name="voyage-law-2",
+        model_id="voyage-law-2",
+        provider="voyage",
+        dimension=1024,
+        description="Voyage AI - Legal domain optimized (~$0.12/1M tokens)",
+    ),
 }
 
 
-def get_embedding_model(embedding_name: str = "bge-large"):
-    """Get an embedding model instance (lazy loaded)."""
+def get_embedding_model(
+    embedding_name: str = "bge-large",
+    input_type: Optional[str] = None
+):
+    """Get an embedding model instance (lazy loaded).
+
+    Args:
+        embedding_name: Name of embedding model from EMBEDDINGS registry
+        input_type: For Cohere embeddings, specifies "search_document" or "search_query".
+                   - "search_document": Use when embedding documents for storage
+                   - "search_query": Use when embedding queries for retrieval
+                   If None, defaults to "search_document" for Cohere.
+
+    Returns:
+        LangChain embedding model instance
+    """
     if embedding_name not in EMBEDDINGS:
         raise ValueError(f"Unknown embedding: {embedding_name}. Available: {list(EMBEDDINGS.keys())}")
 
@@ -97,8 +281,104 @@ def get_embedding_model(embedding_name: str = "bge-large"):
     elif config.provider == "openai":
         from langchain_openai import OpenAIEmbeddings
         return OpenAIEmbeddings(model=config.model_id)
+    elif config.provider == "azure":
+        from langchain_openai import AzureOpenAIEmbeddings
+        # Requires: AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY
+        azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+        azure_api_key = os.environ.get("AZURE_OPENAI_API_KEY")
+        azure_deployment = os.environ.get("AZURE_EMBEDDING_DEPLOYMENT", config.model_id)
+        if not azure_endpoint or not azure_api_key:
+            raise ValueError(
+                "Azure embeddings require AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY env vars"
+            )
+        return AzureOpenAIEmbeddings(
+            azure_endpoint=azure_endpoint,
+            api_key=azure_api_key,
+            azure_deployment=azure_deployment,
+            model=config.model_id,
+        )
+    elif config.provider == "cohere":
+        # Cohere uses distinct input_type for queries vs documents
+        # This is the key dsRAG insight for SOTA retrieval
+        api_key = os.environ.get("COHERE_API_KEY") or os.environ.get("CO_API_KEY")
+        if not api_key:
+            raise ValueError("Cohere embeddings require COHERE_API_KEY or CO_API_KEY env var")
+
+        if input_type is not None:
+            # Explicit input_type requested - create fixed-type embeddings
+            # Use this for ingestion (search_document) or testing
+            from langchain_cohere import CohereEmbeddings
+            if input_type not in ("search_document", "search_query"):
+                raise ValueError(
+                    f"Cohere input_type must be 'search_document' or 'search_query', got: {input_type}"
+                )
+            print(f"Using Cohere embeddings with fixed input_type={input_type}")
+            return CohereEmbeddings(
+                model=config.model_id,
+                cohere_api_key=api_key,
+                user_agent="dsrag-style-rag",
+            )
+        else:
+            # No explicit input_type - return wrapper that uses correct type automatically
+            # embed_documents() uses "search_document", embed_query() uses "search_query"
+            print("Using Cohere embeddings with automatic input_type switching")
+            return CohereAsymmetricEmbeddings(
+                model=config.model_id,
+                api_key=api_key,
+            )
+    elif config.provider == "voyage":
+        # Voyage AI - SOTA retrieval embeddings (+20% over Cohere)
+        # Supports asymmetric input_type (document vs query)
+        api_key = os.environ.get("VOYAGE_API_KEY")
+        if not api_key:
+            raise ValueError("Voyage embeddings require VOYAGE_API_KEY env var")
+
+        if input_type is not None:
+            # Explicit input_type requested - use LangChain wrapper
+            from langchain_voyageai import VoyageAIEmbeddings
+            if input_type not in ("document", "query"):
+                raise ValueError(
+                    f"Voyage input_type must be 'document' or 'query', got: {input_type}"
+                )
+            print(f"Using Voyage embeddings with fixed input_type={input_type}")
+            return VoyageAIEmbeddings(
+                model=config.model_id,
+                voyage_api_key=api_key,
+            )
+        else:
+            # No explicit input_type - return wrapper that uses correct type automatically
+            print("Using Voyage embeddings with automatic input_type switching")
+            return VoyageAsymmetricEmbeddings(
+                model=config.model_id,
+                api_key=api_key,
+            )
     else:
         raise ValueError(f"Unknown provider: {config.provider}")
+
+
+def is_cohere_embedding(embedding_name: str) -> bool:
+    """Check if the embedding model is a Cohere model."""
+    if embedding_name not in EMBEDDINGS:
+        return False
+    return EMBEDDINGS[embedding_name].provider == "cohere"
+
+
+def is_voyage_embedding(embedding_name: str) -> bool:
+    """Check if the embedding model is a Voyage AI model."""
+    if embedding_name not in EMBEDDINGS:
+        return False
+    return EMBEDDINGS[embedding_name].provider == "voyage"
+
+
+def is_asymmetric_embedding(embedding_name: str) -> bool:
+    """Check if the embedding model uses asymmetric input types (query vs document).
+
+    Both Cohere and Voyage AI use different representations for queries vs documents,
+    which is the key insight from dsRAG for achieving SOTA retrieval.
+    """
+    if embedding_name not in EMBEDDINGS:
+        return False
+    return EMBEDDINGS[embedding_name].provider in ("cohere", "voyage")
 
 
 # =============================================================================
@@ -241,6 +521,7 @@ class RouteConfig:
     use_hyde: bool = False
     use_table_preference: bool = False
     table_quota_ratio: float = 0.6
+    skip_rerank: bool = False  # Override pipeline reranking (e.g., for legal domain)
 
 
 ROUTES: Dict[str, RouteConfig] = {
@@ -269,6 +550,77 @@ ROUTES: Dict[str, RouteConfig] = {
 }
 
 
+# Domain-specific route configurations
+# LegalBench-RAG finding: general-purpose rerankers hurt legal text retrieval
+LEGAL_ROUTES: Dict[str, RouteConfig] = {
+    "metrics-generated": RouteConfig(
+        pipeline_id="hybrid_filter",  # No rerank in pipeline_id
+        top_k=10,
+        initial_k_factor=4.0,
+        skip_rerank=True,  # Per LegalBench-RAG findings
+        use_table_preference=True,
+        table_quota_ratio=0.8,  # Legal contracts have many structured clauses
+    ),
+    "domain-relevant": RouteConfig(
+        pipeline_id="hybrid_filter",
+        top_k=5,
+        initial_k_factor=3.0,
+        skip_rerank=True,
+    ),
+    "novel-generated": RouteConfig(
+        pipeline_id="hybrid_filter",
+        top_k=8,
+        initial_k_factor=3.0,
+        use_hyde=True,
+        skip_rerank=True,  # Skip rerank even with HyDE for legal
+    ),
+}
+
+# Medical routes - reranking may help with biomedical terminology
+MEDICAL_ROUTES: Dict[str, RouteConfig] = {
+    "metrics-generated": RouteConfig(
+        pipeline_id="hybrid_filter_rerank",
+        top_k=10,
+        initial_k_factor=4.0,
+        use_table_preference=True,
+        table_quota_ratio=0.7,
+    ),
+    "domain-relevant": RouteConfig(
+        pipeline_id="hybrid_filter_rerank",
+        top_k=5,
+        initial_k_factor=3.0,
+    ),
+    "novel-generated": RouteConfig(
+        pipeline_id="hybrid_filter_rerank",
+        top_k=8,
+        initial_k_factor=3.0,
+        use_hyde=True,
+    ),
+}
+
+
+# Registry mapping domain names to their route configurations
+DOMAIN_ROUTES: Dict[str, Dict[str, RouteConfig]] = {
+    "finance": ROUTES,  # Default with reranking
+    "legal": LEGAL_ROUTES,  # Skip reranking per LegalBench-RAG
+    "medical": MEDICAL_ROUTES,  # Keep reranking for biomedical text
+}
+
+
+def get_routes_for_domain(domain: str) -> Dict[str, RouteConfig]:
+    """Get route configuration for a specific domain.
+
+    Args:
+        domain: One of "finance", "legal", "medical"
+
+    Returns:
+        Route configuration dictionary for the domain
+    """
+    if domain not in DOMAIN_ROUTES:
+        raise ValueError(f"Unknown domain '{domain}'. Available: {list(DOMAIN_ROUTES.keys())}")
+    return DOMAIN_ROUTES[domain]
+
+
 # =============================================================================
 # Default Settings
 # =============================================================================
@@ -280,7 +632,7 @@ class Defaults:
     llm_model: str = "claude-sonnet-4-5-20250514"
     embedding_model: str = "bge-large"  # FREE local embedding (was text-embedding-3-large)
     reranker_model: str = "BAAI/bge-reranker-large"  # Also FREE local
-    judge_model: str = "claude-sonnet-4-5-20250514"
+    judge_model: str = "gpt-4o-mini"  # Was claude-sonnet-4-5-20250514 (404 error)
 
     # Retrieval defaults
     top_k: int = 5
