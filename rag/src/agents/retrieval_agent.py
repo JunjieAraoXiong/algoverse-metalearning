@@ -16,6 +16,7 @@ class RetrievalStrategy:
     top_k: int
     initial_k_factor: float
     use_hyde: bool = False
+    use_rse: bool = False
     use_rerank: bool = True
 
 
@@ -37,20 +38,22 @@ ESCALATION_STRATEGIES = [
         use_hyde=False,
         use_rerank=True,
     ),
-    # Attempt 2: Use HyDE for semantic expansion
+    # Attempt 2: Use RSE for richer context windows
     RetrievalStrategy(
         pipeline_id="hybrid_filter_rerank",
         top_k=25,
         initial_k_factor=5.0,
-        use_hyde=True,
+        use_hyde=False,
+        use_rse=True,
         use_rerank=True,
     ),
-    # Attempt 3: Maximum recall configuration
+    # Attempt 3: Maximum recall configuration with RSE
     RetrievalStrategy(
         pipeline_id="hybrid_filter_rerank",
         top_k=30,
         initial_k_factor=6.0,
-        use_hyde=True,
+        use_hyde=False,
+        use_rse=True,
         use_rerank=True,
     ),
 ]
@@ -326,9 +329,73 @@ class RetrievalAgent(BaseAgent):
 
             return self._pipeline.retrieve(query)
 
-        # Fallback: use simple semantic search from ChromaDB directly
-        # This is more robust than rebuilding complex pipelines
-        docs = self.db.similarity_search(query, k=top_k)
+        # Extract metadata from question for filtering
+        # This ensures company-specific queries (e.g., "AMD revenue FY22") retrieve
+        # the correct company's documents rather than semantically similar but wrong docs
+        from src.metadata_utils import extract_metadata_from_question, filter_chunks_by_metadata
+        question_metadata = extract_metadata_from_question(question)
+        companies = question_metadata.get('companies', [])
+        years = question_metadata.get('years', [])
+
+        # Build ChromaDB filter if BOTH company AND year are specified (high confidence)
+        chroma_filter = None
+        if companies and years:
+            filter_conditions = []
+            # Normalize company names to match ChromaDB format (uppercase, no spaces)
+            # ChromaDB stores: "BESTBUY", "AMERICANWATERWORKS", "COCACOLA" etc.
+            normalized_companies = [
+                c.upper().replace(" ", "").replace("-", "").replace("&", "AND")
+                for c in companies
+            ]
+            if len(normalized_companies) == 1:
+                filter_conditions.append({"company": normalized_companies[0]})
+            else:
+                filter_conditions.append({"company": {"$in": normalized_companies}})
+
+            # Years stored as integers in metadata
+            if len(years) == 1:
+                filter_conditions.append({"year": years[0]})
+            else:
+                filter_conditions.append({"year": {"$in": years}})
+
+            if len(filter_conditions) == 1:
+                chroma_filter = filter_conditions[0]
+            else:
+                chroma_filter = {"$and": filter_conditions}
+
+        # Try PRE-FILTERING at retrieval time (most efficient)
+        # ChromaDB 1.3.5 has a bug with similarity_search(filter=...), so we use
+        # a two-step approach: get filtered docs first, then do BM25 search within them
+        docs = None
+        if chroma_filter:
+            try:
+                # Step 1: Get filtered documents using db.get() which works reliably
+                filtered_result = self.db.get(where=chroma_filter, limit=top_k * 3)
+                if filtered_result and filtered_result.get("documents"):
+                    # Step 2: Do BM25 search within filtered docs for relevance ranking
+                    from langchain_community.retrievers import BM25Retriever
+                    filtered_docs = [
+                        Document(page_content=text, metadata=meta)
+                        for text, meta in zip(
+                            filtered_result["documents"],
+                            filtered_result["metadatas"]
+                        )
+                    ]
+                    if len(filtered_docs) > 0:
+                        bm25 = BM25Retriever.from_documents(filtered_docs)
+                        bm25.k = min(top_k, len(filtered_docs))
+                        docs = bm25.invoke(query)
+                        print(f"✓ Pre-filter + BM25: {len(docs)} docs for {companies} {years}")
+            except Exception as e:
+                print(f"⚠️ Pre-filter failed: {e}, using unfiltered search")
+                docs = None
+
+        # Fallback: unfiltered semantic search + post-retrieval filtering
+        if docs is None:
+            docs = self.db.similarity_search(query, k=top_k)
+            # Apply POST-FILTERING if we have metadata (may return partial results)
+            if companies or years:
+                docs = filter_chunks_by_metadata(docs, question_metadata)
 
         # Apply reranking if configured
         if strategy_values.get("use_rerank") and self.reranker_model:

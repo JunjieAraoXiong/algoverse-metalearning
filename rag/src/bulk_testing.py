@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from langchain_chroma import Chroma
 
 # Import custom modules
-from dataset_adapters import BaseDatasetAdapter, FinanceBenchAdapter, PubMedQAAdapter, CUADAdapter
+from dataset_adapters import BaseDatasetAdapter, FinanceBenchAdapter, FinQAAdapter, PubMedQAAdapter, CUADAdapter
 from evaluation.metrics import (
     embedding_similarity,
     calculate_aggregate_metrics,
@@ -679,6 +679,11 @@ def main():
         help='Path to subset questions CSV'
     )
     parser.add_argument(
+        '--split', type=str, default='dev',
+        choices=['train', 'dev', 'test', 'validation'],
+        help='Dataset split to use (for FinQA and similar HuggingFace datasets). Default: dev'
+    )
+    parser.add_argument(
         '--use-llm-judge', action='store_true',
         help='Enable LLM-as-a-Judge evaluation'
     )
@@ -816,6 +821,8 @@ def main():
                 config.chroma_path = str(Path(__file__).parent.parent / "chroma_medical")
             elif ds == 'financebench':
                 config.chroma_path = str(Path(__file__).parent.parent / "chroma")
+            elif ds == 'finqa':
+                config.chroma_path = str(Path(__file__).parent.parent / "chroma_finqa")
             elif ds == 'cuad':
                 config.chroma_path = str(Path(__file__).parent.parent / "chroma_cuad")
 
@@ -824,6 +831,7 @@ def main():
         ds = args.dataset.lower()
         dataset_to_domain = {
             'financebench': 'finance',
+            'finqa': 'finance',
             'cuad': 'legal',
             'pubmedqa': 'medical',
         }
@@ -835,13 +843,15 @@ def main():
     ds = args.dataset.lower()
     if ds == 'financebench':
         adapter = FinanceBenchAdapter(subset_csv=args.subset)
+    elif ds == 'finqa':
+        adapter = FinQAAdapter(subset_csv=args.subset, split=args.split)
     elif ds == 'pubmedqa':
         adapter = PubMedQAAdapter(subset_csv=args.subset)
     elif ds == 'cuad':
         adapter = CUADAdapter(subset_csv=args.subset)
     else:
         print(f"ERROR: Unknown dataset '{args.dataset}'")
-        print("Available datasets: financebench, pubmedqa, cuad")
+        print("Available datasets: financebench, finqa, pubmedqa, cuad")
         sys.exit(1)
 
     # Create runner and execute
